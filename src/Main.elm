@@ -1,8 +1,9 @@
 module Main exposing (..)
 
-import Browser
+import Browser exposing (Document)
 import Html exposing (Html, div, h1, img, text)
 import Html.Attributes exposing (src)
+import Page.MyMods as MyMods
 
 
 
@@ -35,11 +36,16 @@ update msg model =
 ---- VIEW ----
 
 
-view : Model -> Html Msg
+view : Model -> Document Msg
 view model =
-    div []
-        [ h1 [] [ text "Your Elm App is working!" ]
+    { title = "hi"
+    , body =
+        [ div []
+            [ h1 [] [ text "Your Elm App is workings!" ]
+            , MyMods.view
+            ]
         ]
+    }
 
 
 
@@ -48,9 +54,11 @@ view model =
 
 main : Program () Model Msg
 main =
-    Browser.element
+    Browser.application
         { view = view
-        , init = \_ -> init
+        , init = \_ _ _ -> init
         , update = update
         , subscriptions = always Sub.none
+        , onUrlChange = always NoOp
+        , onUrlRequest = always NoOp
         }
