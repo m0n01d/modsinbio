@@ -1,4 +1,4 @@
-module Page.Settings exposing (Model, view)
+module Page.Login exposing (..)
 
 import Data.Session exposing (Session)
 import Html
@@ -6,7 +6,3 @@ import Html
 
 type alias Model =
     { session : Session }
-
-
-view =
-    Html.text "Settings"
