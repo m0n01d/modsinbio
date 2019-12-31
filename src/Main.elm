@@ -39,6 +39,7 @@ type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | HomeMsg Home.Msg
+    | MyModsMsg MyMods.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -60,6 +61,13 @@ update msg model =
                 |> updateWith Home HomeMsg
 
         ( HomeMsg _, _ ) ->
+            ( model, Cmd.none )
+
+        ( MyModsMsg subMsg, MyMods subModel ) ->
+            MyMods.update subMsg subModel
+                |> updateWith MyMods MyModsMsg
+
+        ( MyModsMsg _, _ ) ->
             ( model, Cmd.none )
 
 
@@ -95,7 +103,7 @@ changeRouteTo maybeRoute model =
         session =
             toSession model
     in
-    case Debug.log "huh " maybeRoute of
+    case maybeRoute of
         Nothing ->
             ( Home { session = session }, Cmd.none )
 
@@ -106,7 +114,9 @@ changeRouteTo maybeRoute model =
             ( Login { session = session }, Cmd.none )
 
         Just Route.Admin ->
-            ( MyMods { session = session }, Cmd.none )
+            ( MyMods <| MyMods.initialModel session
+            , Cmd.none
+            )
 
         Just Route.Settings ->
             ( Settings { session = session }, Cmd.none )
@@ -127,10 +137,15 @@ view model =
     }
 
 
+viewContent : Model -> Html Msg
 viewContent model =
     case model of
         Home m ->
             Home.view
+
+        MyMods subModel ->
+            MyMods.view subModel
+                |> Html.map MyModsMsg
 
         _ ->
             Html.text ""
