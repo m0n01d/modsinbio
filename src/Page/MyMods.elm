@@ -37,6 +37,7 @@ type alias ModSection =
     , suggestedTitle : WebData String
     , newUrl : String
     , newTitle : String
+    , newDescription : String
     , mods : List Mod
     }
 
@@ -46,6 +47,7 @@ newModSection =
     , suggestedTitle = NotAsked
     , newUrl = ""
     , newTitle = ""
+    , newDescription = ""
     , mods = []
     }
 
@@ -85,7 +87,7 @@ view model =
                             |> Dict.foldr
                                 (\k v acc ->
                                     Html.li []
-                                        [ Html.div [ Attributes.class "flex w-full px-2" ]
+                                        [ Html.div [ Attributes.class "flex items-center w-full px-2 py-1 border-b border-gray-100" ]
                                             [ Html.p [ Attributes.class "font-semibold mr-auto" ]
                                                 [ Html.text k ]
                                             , Html.button
@@ -187,6 +189,7 @@ type Msg
     | FetchTitleResponse SectionTitle (WebData String)
     | UseSuggestedTitle SectionTitle String
     | SetNewTitle SectionTitle String
+    | SetNewDescription String
     | NoOp
 
 
@@ -286,7 +289,7 @@ update msg model =
             , Cmd.none
             )
 
-        _ ->
+        NoOp ->
             ( model, Cmd.none )
 
 
