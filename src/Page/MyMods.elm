@@ -39,6 +39,7 @@ type alias ModSection =
     , newTitle : String
     , newDescription : String
     , mods : List Mod
+    , savingState : WebData ()
     }
 
 
@@ -49,6 +50,7 @@ newModSection =
     , newTitle = ""
     , newDescription = ""
     , mods = []
+    , savingState = NotAsked
     }
 
 
@@ -74,14 +76,14 @@ view model =
             [ Html.p [] [ Html.text "My car" ]
             , Html.text "2018 Subaru WRX Premium"
             ]
-        , Html.div []
-            [ Html.p [ Attributes.class "capitalize text-center" ]
-                [ Html.text "my mods" ]
-            ]
         , Html.div [ Attributes.class "flex md:flex-row flex-col" ]
             [ Html.div [ Attributes.class "flex-1" ]
-                [ Html.div []
-                    [ Html.ul
+                [ Html.div [ Attributes.class "mt-4" ]
+                    [ Html.div []
+                        [ Html.p [ Attributes.class "capitalize text-center" ]
+                            [ Html.text "my mods" ]
+                        ]
+                    , Html.ul
                         []
                         (model.mods
                             |> Dict.foldr
@@ -115,7 +117,7 @@ view model =
 
 
 viewNewLink : String -> ModSection -> Html Msg
-viewNewLink k section =
+viewNewLink sectionTitle section =
     Html.form
         [ Attributes.classList
             [ ( "hidden"
@@ -123,13 +125,16 @@ viewNewLink k section =
               )
             , ( "px-2 mb-4 py-2", True )
             ]
+        , Events.onSubmit <| AddLink sectionTitle
+        , Attributes.disabled <| RemoteData.isLoading section.savingState
         ]
         [ Html.div [ Attributes.class "flex items-center mb-1" ]
-            [ Html.label [ Attributes.class "font-medium text-sm" ] [ Html.text "Url:" ]
+            [ Html.label [ Attributes.class "font-medium text-sm" ]
+                [ Html.text "Url:" ]
             , Html.input
                 [ Attributes.class "border ml-2 flex-1 px-1 rounded-sm"
                 , Attributes.placeholder "https://fastcars.com"
-                , Events.onInput <| SetNewUrl k
+                , Events.onInput <| SetNewUrl sectionTitle
                 , Attributes.value section.newUrl
                 ]
                 []
@@ -141,7 +146,7 @@ viewNewLink k section =
                 , Html.input
                     [ Attributes.class "border ml-2 flex-1 px-1 rounded-sm"
                     , Attributes.placeholder "Go fast parts"
-                    , Events.onInput <| SetNewTitle k
+                    , Events.onInput <| SetNewTitle sectionTitle
                     , Attributes.disabled (RemoteData.isNotAsked section.suggestedTitle)
                     , section.suggestedTitle
                         |> RemoteData.map Attributes.value
@@ -163,11 +168,15 @@ viewNewLink k section =
             , Html.textarea
                 [ Attributes.placeholder "For shoutouts and things"
                 , Attributes.class "border rounded-sm w-full px-2 py-1"
+                , Attributes.value section.newDescription
+                , Events.onInput <| SetNewDescription sectionTitle
                 ]
-                []
+                [ Html.text section.newDescription ]
             ]
         , Html.button
             [ Attributes.class "px-4 py-2 font-medium text-center rounded-sm border"
+            , Attributes.classList [ ( "cursor-not-allowed opacity-50", RemoteData.isLoading section.savingState ) ]
+            , Attributes.disabled <| RemoteData.isLoading section.savingState
             ]
             [ Html.text "Save" ]
         ]
@@ -175,7 +184,12 @@ viewNewLink k section =
 
 viewLink url =
     Html.li []
-        [ Html.text url.title
+        [ Html.a
+            [ Attributes.href <| Url.toString url.url
+            , Attributes.rel "noopener"
+            , Attributes.target "_blank"
+            ]
+            [ Html.text url.title ]
         ]
 
 
@@ -189,7 +203,9 @@ type Msg
     | FetchTitleResponse SectionTitle (WebData String)
     | UseSuggestedTitle SectionTitle String
     | SetNewTitle SectionTitle String
-    | SetNewDescription String
+    | SetNewDescription SectionTitle String
+    | AddLink SectionTitle
+    | AddLinkResponse SectionTitle (WebData ())
     | NoOp
 
 
@@ -221,7 +237,12 @@ update msg model =
                         (\v ->
                             case v of
                                 Just section ->
-                                    Just { section | newUrl = url, suggestedTitle = Loading }
+                                    Just
+                                        { section
+                                            | newUrl = url
+                                            , suggestedTitle = Loading
+                                            , savingState = NotAsked
+                                        }
 
                                 Nothing ->
                                     Nothing
@@ -239,14 +260,18 @@ update msg model =
                     (delay 0 (FetchTitleResponse sectionTitle (Success "")))
             )
 
-        FetchTitleResponse sectionTitle res ->
+        FetchTitleResponse sectionTitle (Success title) ->
             ( { model
                 | mods =
                     Dict.update sectionTitle
                         (\v ->
                             case v of
                                 Just section ->
-                                    Just { section | suggestedTitle = res }
+                                    Just
+                                        { section
+                                            | suggestedTitle = Success title
+                                            , newTitle = title
+                                        }
 
                                 Nothing ->
                                     Nothing
@@ -255,6 +280,12 @@ update msg model =
               }
             , Cmd.none
             )
+
+        FetchTitleResponse sectionTitle (Failure why) ->
+            ( model, Cmd.none )
+
+        FetchTitleResponse sectionTitle _ ->
+            ( model, Cmd.none )
 
         UseSuggestedTitle sectionTitle title ->
             update (SetNewTitle sectionTitle title)
@@ -288,6 +319,76 @@ update msg model =
               }
             , Cmd.none
             )
+
+        SetNewDescription sectionTitle description ->
+            ( { model
+                | mods =
+                    Dict.update sectionTitle
+                        (\v ->
+                            case v of
+                                Just section ->
+                                    Just { section | newDescription = description }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.mods
+              }
+            , Cmd.none
+            )
+
+        AddLink sectionTitle ->
+            --todo
+            -- validate fields
+            ( { model
+                | mods =
+                    Dict.update sectionTitle
+                        (\v ->
+                            case v of
+                                Just section ->
+                                    Just { section | savingState = Loading }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.mods
+              }
+            , delay 1000 (AddLinkResponse sectionTitle (Success ()))
+            )
+
+        AddLinkResponse sectionTitle (Success ()) ->
+            case Dict.get sectionTitle model.mods of
+                Just section ->
+                    case Url.fromString section.newUrl of
+                        Just url ->
+                            let
+                                newUrl =
+                                    { url = url, description = section.newDescription, title = section.newTitle }
+                            in
+                            ( { model
+                                | mods =
+                                    Dict.update sectionTitle
+                                        (\v ->
+                                            case v of
+                                                Just sect ->
+                                                    Just { newModSection | mods = newUrl :: section.mods }
+
+                                                Nothing ->
+                                                    Nothing
+                                        )
+                                        model.mods
+                              }
+                            , Cmd.none
+                            )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        AddLinkResponse sectionTitle _ ->
+            ( model, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
