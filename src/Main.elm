@@ -131,24 +131,33 @@ view model =
     { title = "hi"
     , body =
         [ div [ Attributes.class "container mx-auto" ]
-            [ viewContent model
+            [ navbar model
+            , viewContent model
             ]
         ]
     }
 
 
+navbar model =
+    Html.header [ Attributes.class "h-6 py-4 px-2 border-b border-grey-500 flex items-center" ]
+        [ Html.text "Navbar"
+        ]
+
+
 viewContent : Model -> Html Msg
 viewContent model =
-    case model of
-        Home m ->
-            Home.view
+    Html.main_ [ Attributes.class "mt-4 px-2" ]
+        [ case model of
+            Home m ->
+                Home.view
 
-        MyMods subModel ->
-            MyMods.view subModel
-                |> Html.map MyModsMsg
+            MyMods subModel ->
+                MyMods.view subModel
+                    |> Html.map MyModsMsg
 
-        _ ->
-            Html.text ""
+            _ ->
+                Html.text ""
+        ]
 
 
 
