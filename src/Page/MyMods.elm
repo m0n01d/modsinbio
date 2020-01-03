@@ -85,7 +85,7 @@ view model =
             ]
         , Html.div [ Attributes.class "flex md:flex-row flex-col" ]
             [ Html.div [ Attributes.class "flex-1" ]
-                [ Html.div [ Attributes.class "mt-4" ]
+                [ Html.div [ Attributes.class "mt-4 md:px-8" ]
                     [ Html.div []
                         [ Html.p [ Attributes.class "capitalize text-center" ]
                             [ Html.text "my mods" ]
@@ -124,7 +124,8 @@ view model =
                         )
                     ]
                 ]
-            , Html.div [ Attributes.class "flex-1" ] [ Html.text "preview" ]
+            , Html.div [ Attributes.class "flex-1" ]
+                [ viewPreview model ]
             ]
         ]
 
@@ -211,12 +212,13 @@ viewLink sectionTitle link =
             , Html.div
                 [ Attributes.class "text-xs mt-1 py-1 flex items-center"
                 ]
-                [ Html.label [ Attributes.class "mx-2" ]
+                [ Html.label [ Attributes.class "mx-2 flex items-center" ]
                     [ Html.text "Active:"
                     , Html.input
                         [ Attributes.type_ "checkbox"
                         , Attributes.name <| String.join " " [ link.title, "enabled" ]
                         , Attributes.checked True
+                        , Attributes.class "ml-1"
                         ]
                         []
                     ]
@@ -230,13 +232,13 @@ viewLink sectionTitle link =
                     ]
                 ]
             , link.panel
-                |> Maybe.map (viewMorePanel sectionTitle link)
+                |> Maybe.map (viewMorePanel { link = link, onClickClose = ClosePanel sectionTitle link.id })
                 |> Maybe.withDefault (Html.text "")
             ]
         ]
 
 
-viewMorePanel sectionTitle link panel =
+viewMorePanel { onClickClose, link } panel =
     case panel of
         DeletionPanel ->
             Html.div [ Attributes.class "text-center" ]
@@ -246,7 +248,7 @@ viewMorePanel sectionTitle link panel =
                     [ Html.text "Delete"
                     , Html.button
                         [ Attributes.class "float-right px-2 py-1 -mt-1 monospace"
-                        , Events.onClick (ClosePanel sectionTitle link.id)
+                        , Events.onClick onClickClose
                         ]
                         [ Html.text "X" ]
                     ]
@@ -254,7 +256,7 @@ viewMorePanel sectionTitle link panel =
                     [ Html.p [] [ Html.text <| String.concat [ "Are you sure you want to permanently delete: \"", link.title, "\"?" ] ]
                     , Html.button
                         [ Attributes.class "mt-2 px-4 py-2 font-medium text-center rounded-sm border mr-4"
-                        , Events.onClick (ClosePanel sectionTitle link.id)
+                        , Events.onClick onClickClose
                         ]
                         [ Html.text "No" ]
                     , Html.button
@@ -266,6 +268,37 @@ viewMorePanel sectionTitle link panel =
 
         AnalyticsPanel ->
             Html.text "analytic"
+
+
+viewPreview model =
+    Html.div [ Attributes.class "flex flex-col justify-center items-center" ]
+        [ Html.div
+            [ Attributes.style "width" "320px"
+            , Attributes.class "border"
+            ]
+            [ Html.div []
+                [ Html.div [] [ Html.text "avatar" ]
+                , Html.p [] [ Html.text "@dwrxht" ]
+                , Html.div []
+                    [ Html.ul []
+                        [ viewPreviewLink
+                        , viewPreviewLink
+                        , viewPreviewLink
+                        ]
+                    ]
+                ]
+            ]
+        ]
+
+
+viewPreviewLink =
+    Html.li []
+        [ Html.a
+            [ Attributes.class "px-2 py-3 border my-2 block"
+            , Attributes.href "https://www.fastwrx.com/collections/shift-knobs/products/cobb-6-speed-shift-knob"
+            ]
+            [ Html.text "COBB 6-Speed Shift Knob | FastWRX.com" ]
+        ]
 
 
 type alias SectionTitle =
