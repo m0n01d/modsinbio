@@ -16,10 +16,17 @@ import Url
 
 
 type alias Mod =
-    { url : Url.Url
+    { id : String
+    , url : Url.Url
     , title : String
     , description : String
+    , panel : Maybe MorePanel
     }
+
+
+type MorePanel
+    = DeletionPanel
+    | AnalyticsPanel
 
 
 type alias Model =
@@ -89,7 +96,7 @@ view model =
                             |> Dict.foldr
                                 (\k v acc ->
                                     Html.li []
-                                        [ Html.div [ Attributes.class "flex items-center w-full px-2 py-1 border-b border-gray-100" ]
+                                        [ Html.div [ Attributes.class "flex items-center w-full px-1 py-1 border-b border-gray-100" ]
                                             [ Html.p [ Attributes.class "font-semibold mr-auto" ]
                                                 [ Html.text k ]
                                             , Html.button
@@ -100,9 +107,15 @@ view model =
                                                 [ Html.text "Add Link" ]
                                             ]
                                         , viewNewLink k v
-                                        , Html.div []
-                                            (v.mods
-                                                |> List.map viewLink
+                                        , Html.div [ Attributes.class "px-1 py-px bg-gray-200" ]
+                                            (if True then
+                                                v.mods
+                                                    |> List.map (viewLink k)
+
+                                             else
+                                                v.mods
+                                                    |> List.take 3
+                                                    |> List.map (viewLink k)
                                             )
                                         ]
                                         :: acc
@@ -182,15 +195,77 @@ viewNewLink sectionTitle section =
         ]
 
 
-viewLink url =
+viewLink sectionTitle link =
     Html.li []
-        [ Html.a
-            [ Attributes.href <| Url.toString url.url
-            , Attributes.rel "noopener"
-            , Attributes.target "_blank"
+        [ Html.div [ Attributes.class "bg-white my-1 px-2 py-1 rounded-sm" ]
+            [ Html.p [] [ Html.text link.title ]
+            , Html.p [ Attributes.class "truncate text-gray-700 text-sm mt-px" ]
+                [ Html.a
+                    [ Attributes.href <| Url.toString link.url
+                    , Attributes.rel "noopener"
+                    , Attributes.target "_blank"
+                    , Attributes.class "text-blue-500"
+                    ]
+                    [ Html.text <| Url.toString link.url ]
+                ]
+            , Html.div
+                [ Attributes.class "text-xs mt-1 py-1 flex items-center"
+                ]
+                [ Html.label [ Attributes.class "mx-2" ]
+                    [ Html.text "Active:"
+                    , Html.input
+                        [ Attributes.type_ "checkbox"
+                        , Attributes.name <| String.join " " [ link.title, "enabled" ]
+                        , Attributes.checked True
+                        ]
+                        []
+                    ]
+                , Html.div [ Attributes.class "ml-auto" ]
+                    [ Html.button
+                        [ Attributes.class "mx-1"
+                        , Events.onClick <| OpenPanel sectionTitle link.id DeletionPanel
+                        ]
+                        [ Html.text "Delete" ]
+                    , Html.button [ Attributes.class "mx-1" ] [ Html.text "Analytics" ]
+                    ]
+                ]
+            , link.panel
+                |> Maybe.map (viewMorePanel sectionTitle link)
+                |> Maybe.withDefault (Html.text "")
             ]
-            [ Html.text url.title ]
         ]
+
+
+viewMorePanel sectionTitle link panel =
+    case panel of
+        DeletionPanel ->
+            Html.div [ Attributes.class "text-center" ]
+                [ Html.p
+                    [ Attributes.class "relative bg-gray-200 "
+                    ]
+                    [ Html.text "Delete"
+                    , Html.button
+                        [ Attributes.class "float-right px-2 py-1 -mt-1 monospace"
+                        , Events.onClick (ClosePanel sectionTitle link.id)
+                        ]
+                        [ Html.text "X" ]
+                    ]
+                , Html.div [ Attributes.class " py-4 px-2" ]
+                    [ Html.p [] [ Html.text <| String.concat [ "Are you sure you want to permanently delete: \"", link.title, "\"?" ] ]
+                    , Html.button
+                        [ Attributes.class "mt-2 px-4 py-2 font-medium text-center rounded-sm border mr-4"
+                        , Events.onClick (ClosePanel sectionTitle link.id)
+                        ]
+                        [ Html.text "No" ]
+                    , Html.button
+                        [ Attributes.class "mt-2 px-4 py-2 font-medium text-center rounded-sm border border-red-800 bg-red-500 text-white"
+                        ]
+                        [ Html.text "Yes" ]
+                    ]
+                ]
+
+        AnalyticsPanel ->
+            Html.text "analytic"
 
 
 type alias SectionTitle =
@@ -206,12 +281,74 @@ type Msg
     | SetNewDescription SectionTitle String
     | AddLink SectionTitle
     | AddLinkResponse SectionTitle (WebData ())
+    | OpenPanel SectionTitle String MorePanel
+    | ClosePanel SectionTitle String
     | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        ClosePanel sectionTitle id ->
+            ( { model
+                | mods =
+                    Dict.update sectionTitle
+                        (\v ->
+                            case v of
+                                Just section ->
+                                    Just
+                                        { section
+                                            | mods =
+                                                section.mods
+                                                    |> List.map
+                                                        (\m ->
+                                                            --todo
+                                                            if m.id == id then
+                                                                { m | panel = Nothing }
+
+                                                            else
+                                                                m
+                                                        )
+                                        }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.mods
+              }
+            , Cmd.none
+            )
+
+        OpenPanel sectionTitle id panel ->
+            ( { model
+                | mods =
+                    Dict.update sectionTitle
+                        (\v ->
+                            case v of
+                                Just section ->
+                                    Just
+                                        { section
+                                            | mods =
+                                                section.mods
+                                                    |> List.map
+                                                        (\m ->
+                                                            --todo
+                                                            if m.id == id then
+                                                                { m | panel = Just panel }
+
+                                                            else
+                                                                m
+                                                        )
+                                        }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.mods
+              }
+            , Cmd.none
+            )
+
         ToggleNewLinkForm sectionTitle ->
             ( { model
                 | mods =
@@ -363,7 +500,12 @@ update msg model =
                         Just url ->
                             let
                                 newUrl =
-                                    { url = url, description = section.newDescription, title = section.newTitle }
+                                    { url = url
+                                    , description = section.newDescription
+                                    , title = section.newTitle
+                                    , panel = Nothing
+                                    , id = Url.toString url
+                                    }
                             in
                             ( { model
                                 | mods =
