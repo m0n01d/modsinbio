@@ -2,7 +2,7 @@ module Route exposing (..)
 
 import Html.Attributes as Attributes
 import Url exposing (Url)
-import Url.Parser exposing (Parser, map, oneOf, parse, s, top)
+import Url.Parser exposing ((</>), Parser, map, oneOf, parse, s, string, top)
 
 
 type Route
@@ -10,6 +10,7 @@ type Route
     | Login
     | Admin
     | Settings
+    | Profile String
 
 
 routeParser : Parser (Route -> a) a
@@ -17,8 +18,9 @@ routeParser =
     oneOf
         [ map Home top
         , map Login (s "login")
-        , map Admin (s "mymods")
-        , map Settings (s "settings")
+        , map Admin (s "app" </> s "mymods")
+        , map Settings (s "app" </> s "settings")
+        , map Profile string
         ]
 
 
@@ -37,10 +39,13 @@ routeToString route =
             "/login"
 
         Admin ->
-            "/mymods"
+            "/app/mymods"
 
         Settings ->
-            "/settings"
+            "/app/settings"
+
+        Profile username ->
+            String.concat [ "/", username ]
 
 
 href route =

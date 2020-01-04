@@ -21,6 +21,7 @@ type Model
     = Home Home.Model
     | Login Login.Model
     | MyMods MyMods.Model
+    | Profile Session.Session String
     | Settings Settings.Model
     | Redirect Session.Session
 
@@ -96,6 +97,9 @@ toSession model =
         Redirect session ->
             session
 
+        Profile session _ ->
+            session
+
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
 changeRouteTo maybeRoute model =
@@ -120,6 +124,13 @@ changeRouteTo maybeRoute model =
 
         Just Route.Settings ->
             ( Settings { session = session }, Cmd.none )
+
+        Just (Route.Profile username) ->
+            let
+                _ =
+                    Debug.log "username" username
+            in
+            ( Profile session username, Cmd.none )
 
 
 
