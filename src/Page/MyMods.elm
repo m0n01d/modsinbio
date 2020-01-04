@@ -271,20 +271,49 @@ viewMorePanel { onClickClose, link } panel =
 
 
 viewPreview model =
-    Html.div [ Attributes.class "flex flex-col justify-center items-center" ]
+    let
+        categoryView =
+            Html.div [ Attributes.class "my-4" ]
+                [ Html.p [ Attributes.class "font-semibold text-sm" ]
+                    [ Html.text "Engine" ]
+                , Html.ul []
+                    [ viewPreviewLink
+                    , viewPreviewLink
+                    , viewPreviewLink
+                    ]
+                , Html.button [ Attributes.class "text-center block w-full text-gray-700" ]
+                    [ Html.text "+ View all" ]
+                ]
+    in
+    Html.div
+        [ Attributes.class "flex flex-col justify-center items-center bg-center bg-contain bg-no-repeat"
+
+        -- , Attributes.style "background-image" "url(/images/iphone.png)"
+        ]
         [ Html.div
             [ Attributes.style "width" "320px"
-            , Attributes.class "border"
+            , Attributes.style "max-height" "529px"
+
+            -- , Attributes.style "transform" "scale(0.75)"
+            , Attributes.class " overflow-y-scroll border-2 border-black rounded"
             ]
-            [ Html.div []
-                [ Html.div [] [ Html.text "avatar" ]
-                , Html.p [] [ Html.text "@dwrxht" ]
-                , Html.div []
-                    [ Html.ul []
-                        [ viewPreviewLink
-                        , viewPreviewLink
-                        , viewPreviewLink
+            [ Html.div [ Attributes.class "bg-white" ]
+                [ Html.div [ Attributes.class "px-2" ]
+                    [ Html.div
+                        [ Attributes.style "background-image" <|
+                            String.concat
+                                [ "url("
+                                , "https://www.placecage.com/200/300"
+                                , ")"
+                                ]
+                        , Attributes.class "bg-contain w-20 h-20 mx-auto mt-8"
                         ]
+                        []
+                    , Html.h1 [ Attributes.class "text-center font-medium text-lg mt-2" ]
+                        [ Html.text "@dwrxht" ]
+                    , categoryView
+                    , categoryView
+                    , categoryView
                     ]
                 ]
             ]
@@ -293,11 +322,28 @@ viewPreview model =
 
 viewPreviewLink =
     Html.li []
-        [ Html.a
-            [ Attributes.class "px-2 py-3 border my-2 block"
-            , Attributes.href "https://www.fastwrx.com/collections/shift-knobs/products/cobb-6-speed-shift-knob"
+        [ Html.div [ Attributes.class "my-3 px-1" ]
+            [ Html.div []
+                [ Html.a
+                    [ Attributes.class "group text-sm md:text-base leading-tight text-center px-2 py-3 border border-green-600 mt-2 block rounded-sm bg-green-500 text-white hover:bg-white hover:text-green-500"
+                    , Attributes.href "https://www.fastwrx.com/collections/shift-knobs/products/cobb-6-speed-shift-knob"
+                    ]
+                    [ Html.text "COBB 6-Speed Shift Knob | FastWRX.com" ]
+                , Html.p
+                    [ Attributes.class "truncate text-xs text-gray-600 px-px py-1 hidden" --hidden for now
+                    ]
+                    [ Html.text "https://www.fastwrx.com/collections/shift-knobs/products/cobb-6-speed-shift-knob" ]
+                ]
+            , Html.button [ Attributes.class "block bg-gray-300 text-gray-800 w-full text-lg font-bold monospace mt-px" ]
+                [ Html.text "···"
+                ]
+            , Html.div
+                [ Attributes.class "border mt-0 px-1 py-2 text-sm text-gray-900"
+                , Attributes.classList [ ( "hidden", True ) ]
+                ]
+                [ Html.text "Here I am adding a comment or whatever. Shoutout to my boy @overlandwrx for the hook up on these sick parts"
+                ]
             ]
-            [ Html.text "COBB 6-Speed Shift Knob | FastWRX.com" ]
         ]
 
 
