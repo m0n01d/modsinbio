@@ -306,7 +306,7 @@ viewPreview model =
                                 , "https://www.placecage.com/300/300"
                                 , ")"
                                 ]
-                        , Attributes.class "bg-contain bg-center bg-no-repeat w-20 h-20 mx-auto mt-8"
+                        , Attributes.class "bg-contain bg-center bg-no-repeat w-20 h-20 mx-auto mt-8 rounded-sm"
                         ]
                         []
                     , Html.h1 [ Attributes.class "text-center font-medium text-lg mt-2" ]
@@ -339,7 +339,7 @@ viewPreviewLink =
                 ]
             , Html.div
                 [ Attributes.class "border mt-0 px-1 py-2 text-sm text-gray-900"
-                , Attributes.classList [ ( "hiddexn", True ) ]
+                , Attributes.classList [ ( "hidden", True ) ]
                 ]
                 [ Html.text "Here I am adding a comment or whatever. Shoutout to my boy @overlandwrx for the hook up on these sick parts"
                 ]
