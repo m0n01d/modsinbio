@@ -7,6 +7,7 @@ import Html.Attributes as Attributes
 import Html.Events as Events
 import Http
 import Json.Decode as Decode
+import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Network.Scraper as Scraper
 import Process
@@ -17,11 +18,27 @@ import Url
 
 type alias Mod =
     { id : String
-    , url : Url.Url
+    , url : Maybe Url.Url
+    , urlString : String
     , title : String
     , description : String
     , panel : Maybe MorePanel
     }
+
+
+decodeToUrl =
+    Decode.string
+        |> Decode.map Url.fromString
+
+
+decodeMod =
+    Decode.succeed Mod
+        |> Decode.required "id" Decode.string
+        |> Decode.custom (Decode.field "urlString" decodeToUrl)
+        |> Decode.required "urlString" Decode.string
+        |> Decode.required "title" Decode.string
+        |> Decode.required "description" Decode.string
+        |> Decode.hardcoded Nothing
 
 
 type MorePanel
@@ -35,15 +52,30 @@ type alias Model =
     }
 
 
+type alias NewLink =
+    { url : String
+    , description : String
+    , title : String
+    }
+
+
+encodeNewLink { url, description, title } =
+    Encode.object
+        [ ( "url", Encode.string url )
+        , ( "description", Encode.string description )
+        , ( "title", Encode.string title )
+        ]
+
+
 type alias Mods =
-    Dict SectionId ModSection
+    Dict CategoryId ModCategory
 
 
-type alias SectionId =
+type alias CategoryId =
     String
 
 
-type alias ModSection =
+type alias ModCategory =
     { formIsHidden : Bool
     , suggestedTitle : WebData String
     , newUrl : String
@@ -51,14 +83,14 @@ type alias ModSection =
     , newDescription : String
     , mods : List Mod
     , savingState : WebData ()
-    , isEditingSectionTitle : Bool
-    , id : SectionId
+    , isEditingCategoryTitle : Bool
+    , id : CategoryId
     , title : String
-    , newTitle_ : String -- new section title
+    , newTitle_ : String -- new category title
     }
 
 
-newModSection id =
+newModCategory id =
     { formIsHidden = True
     , suggestedTitle = NotAsked
     , newUrl = ""
@@ -66,7 +98,7 @@ newModSection id =
     , newDescription = ""
     , mods = []
     , savingState = NotAsked
-    , isEditingSectionTitle = False
+    , isEditingCategoryTitle = False
     , id = id
     , title = id
     , newTitle_ = id
@@ -74,12 +106,12 @@ newModSection id =
 
 
 initialMods =
-    [ ( "a", newModSection "Engine" )
-    , ( "b", newModSection "Exterior" )
-    , ( "c", newModSection "Interior" )
-    , ( "d", newModSection "Suspension" )
-    , ( "e", newModSection "Wheels" )
-    , ( "f", newModSection "Misc" )
+    [ ( "a", newModCategory "Engine" )
+    , ( "b", newModCategory "Exterior" )
+    , ( "c", newModCategory "Interior" )
+    , ( "d", newModCategory "Suspension" )
+    , ( "e", newModCategory "Wheels" )
+    , ( "f", newModCategory "Misc" )
     ]
 
 
@@ -106,58 +138,58 @@ view model =
                         []
                         (model.mods
                             |> Dict.foldr
-                                (\sectionId v acc ->
+                                (\categoryId v acc ->
                                     Html.li []
                                         [ Html.div [ Attributes.class "flex items-center w-full px-1 py-1 border-b border-gray-100" ]
                                             [ Html.p
                                                 [ Attributes.class "font-semibold mr-auto"
-                                                , Attributes.classList [ ( "hidden", v.isEditingSectionTitle ) ]
+                                                , Attributes.classList [ ( "hidden", v.isEditingCategoryTitle ) ]
                                                 ]
                                                 [ Html.text v.title
                                                 , Html.button
                                                     [ Attributes.class "text-xs ml-2"
-                                                    , Events.onClick <| ToggleEditSection sectionId
+                                                    , Events.onClick <| ToggleEditCategory categoryId
                                                     ]
                                                     [ Html.text "Edit" ]
                                                 ]
                                             , Html.div
                                                 [ Attributes.class " mr-auto"
                                                 , Attributes.classList
-                                                    [ ( "hidden", not v.isEditingSectionTitle )
+                                                    [ ( "hidden", not v.isEditingCategoryTitle )
                                                     , ( "font-semibold block", True )
                                                     ]
                                                 ]
                                                 [ Html.input
                                                     [ Attributes.value v.newTitle_
                                                     , Attributes.class "border px-1"
-                                                    , Events.onInput <| SetNewSectionTitle sectionId
+                                                    , Events.onInput <| SetNewCategoryTitle categoryId
                                                     ]
                                                     []
                                                 , Html.button
                                                     [ Attributes.class "ml-1 text-xs"
 
-                                                    -- , Events.onClick <| ToggleEditSection sectionId
-                                                    , Events.onClick <| SaveNewSectionTitle sectionId
+                                                    -- , Events.onClick <| ToggleEditCategory categoryId
+                                                    , Events.onClick <| SaveNewCategoryTitle categoryId
                                                     ]
                                                     [ Html.text "Save" ]
                                                 ]
                                             , Html.button
                                                 [ Attributes.type_ "button"
                                                 , Attributes.class "py-2 rounded-sm text-sm"
-                                                , Events.onClick <| ToggleNewLinkForm sectionId
+                                                , Events.onClick <| ToggleNewLinkForm categoryId
                                                 ]
                                                 [ Html.text "Add Link" ]
                                             ]
-                                        , viewNewLinkForm sectionId v
+                                        , viewNewLinkForm categoryId v
                                         , Html.div [ Attributes.class "px-1 py-px bg-gray-200" ]
                                             (if True then
                                                 v.mods
-                                                    |> List.map (viewLink sectionId)
+                                                    |> List.map (viewLink categoryId)
 
                                              else
                                                 v.mods
                                                     |> List.take 3
-                                                    |> List.map (viewLink sectionId)
+                                                    |> List.map (viewLink categoryId)
                                             )
                                         ]
                                         :: acc
@@ -172,17 +204,17 @@ view model =
         ]
 
 
-viewNewLinkForm : String -> ModSection -> Html Msg
-viewNewLinkForm sectionTitle section =
+viewNewLinkForm : String -> ModCategory -> Html Msg
+viewNewLinkForm categoryTitle category =
     Html.form
         [ Attributes.classList
             [ ( "hidden"
-              , section.formIsHidden
+              , category.formIsHidden
               )
             , ( "px-2 mb-4 py-2", True )
             ]
-        , Events.onSubmit <| AddLink sectionTitle
-        , Attributes.disabled <| RemoteData.isLoading section.savingState
+        , Events.onSubmit <| AddLink categoryTitle
+        , Attributes.disabled <| RemoteData.isLoading category.savingState
         ]
         [ Html.div [ Attributes.class "flex items-center mb-1" ]
             [ Html.label [ Attributes.class "font-medium text-sm" ]
@@ -190,8 +222,8 @@ viewNewLinkForm sectionTitle section =
             , Html.input
                 [ Attributes.class "border ml-2 flex-1 px-1 rounded-sm"
                 , Attributes.placeholder "https://fastcars.com"
-                , Events.onInput <| SetNewUrl sectionTitle
-                , Attributes.value section.newUrl
+                , Events.onInput <| SetNewUrl categoryTitle
+                , Attributes.value category.newUrl
                 ]
                 []
             ]
@@ -202,14 +234,14 @@ viewNewLinkForm sectionTitle section =
                 , Html.input
                     [ Attributes.class "border ml-2 flex-1 px-1 rounded-sm"
                     , Attributes.placeholder "Go fast parts"
-                    , Events.onInput <| SetNewTitle sectionTitle
-                    , Attributes.disabled (RemoteData.isNotAsked section.suggestedTitle)
-                    , section.suggestedTitle
+                    , Events.onInput <| SetNewTitle categoryTitle
+                    , Attributes.disabled (RemoteData.isNotAsked category.suggestedTitle)
+                    , category.suggestedTitle
                         |> RemoteData.map Attributes.value
                         |> RemoteData.withDefault (Attributes.name "")
                     , Attributes.placeholder <|
                         -- consider using label to show fetching
-                        if RemoteData.isLoading section.suggestedTitle then
+                        if RemoteData.isLoading category.suggestedTitle then
                             "Fetching title..."
 
                         else
@@ -224,32 +256,32 @@ viewNewLinkForm sectionTitle section =
             , Html.textarea
                 [ Attributes.placeholder "For shoutouts and things"
                 , Attributes.class "border rounded-sm w-full px-2 py-1"
-                , Attributes.value section.newDescription
-                , Events.onInput <| SetNewDescription sectionTitle
+                , Attributes.value category.newDescription
+                , Events.onInput <| SetNewDescription categoryTitle
                 ]
-                [ Html.text section.newDescription ]
+                [ Html.text category.newDescription ]
             ]
         , Html.button
             [ Attributes.class "px-4 py-2 font-medium text-center rounded-sm border"
-            , Attributes.classList [ ( "cursor-not-allowed opacity-50", RemoteData.isLoading section.savingState ) ]
-            , Attributes.disabled <| RemoteData.isLoading section.savingState
+            , Attributes.classList [ ( "cursor-not-allowed opacity-50", RemoteData.isLoading category.savingState ) ]
+            , Attributes.disabled <| RemoteData.isLoading category.savingState
             ]
             [ Html.text "Save" ]
         ]
 
 
-viewLink sectionTitle link =
+viewLink categoryTitle link =
     Html.li []
         [ Html.div [ Attributes.class "bg-white my-1 px-2 py-1 rounded-sm" ]
             [ Html.p [] [ Html.text link.title ]
             , Html.p [ Attributes.class "truncate text-gray-700 text-sm mt-px" ]
                 [ Html.a
-                    [ Attributes.href <| Url.toString link.url
+                    [ Attributes.href link.urlString
                     , Attributes.rel "noopener"
                     , Attributes.target "_blank"
                     , Attributes.class "text-blue-500"
                     ]
-                    [ Html.text <| Url.toString link.url ]
+                    [ Html.text link.urlString ]
                 ]
             , Html.div
                 [ Attributes.class "text-xs mt-1 py-1 flex items-center"
@@ -267,14 +299,14 @@ viewLink sectionTitle link =
                 , Html.div [ Attributes.class "ml-auto" ]
                     [ Html.button
                         [ Attributes.class "mx-1"
-                        , Events.onClick <| OpenPanel sectionTitle link.id DeletionPanel
+                        , Events.onClick <| OpenPanel categoryTitle link.id DeletionPanel
                         ]
                         [ Html.text "Delete" ]
                     , Html.button [ Attributes.class "mx-1" ] [ Html.text "Analytics" ]
                     ]
                 ]
             , link.panel
-                |> Maybe.map (viewMorePanel { link = link, onClickClose = ClosePanel sectionTitle link.id })
+                |> Maybe.map (viewMorePanel { link = link, onClickClose = ClosePanel categoryTitle link.id })
                 |> Maybe.withDefault (Html.text "")
             ]
         ]
@@ -389,62 +421,88 @@ viewPreviewLink =
         ]
 
 
-type alias SectionTitle =
+type alias CategoryTitle =
     String
 
 
 type Msg
-    = ToggleNewLinkForm SectionTitle
-    | SetNewUrl SectionTitle String
-    | FetchTitleResponse SectionTitle (WebData String)
-    | UseSuggestedTitle SectionTitle String
-    | SetNewTitle SectionTitle String
-    | SetNewDescription SectionTitle String
-    | AddLink SectionTitle
-    | AddLinkResponse SectionTitle (WebData ())
-    | OpenPanel SectionTitle String MorePanel
-    | ClosePanel SectionTitle String
-    | ToggleEditSection String
-    | SetNewSectionTitle SectionTitle String
-    | SaveNewSectionTitle SectionTitle
-      -- | SaveUpdatedTitle SectionTitle
+    = ToggleNewLinkForm CategoryTitle
+    | SetNewUrl CategoryTitle String
+    | FetchTitleResponse CategoryTitle (WebData String)
+    | UseSuggestedTitle CategoryTitle String
+    | SetNewTitle CategoryTitle String
+    | SetNewDescription CategoryTitle String
+    | AddLink CategoryTitle
+    | AddLinkResponse CategoryTitle (WebData Mod)
+    | OpenPanel CategoryTitle String MorePanel
+    | ClosePanel CategoryTitle String
+    | ToggleEditCategory String
+    | SetNewCategoryTitle CategoryTitle String
+    | SaveNewCategoryTitle CategoryTitle
+    | SaveNewCategoryTitleResponse (Result Http.Error String)
+      -- | SaveUpdatedTitle CategoryTitle
     | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        SaveNewSectionTitle sectionId ->
-            ( { model
-                | mods =
-                    Dict.update sectionId
+        SaveNewCategoryTitle categoryId ->
+            let
+                updatedMods =
+                    Dict.update categoryId
                         (\v ->
                             case v of
-                                Just section ->
+                                Just category ->
                                     Just
-                                        { section
+                                        { category
                                             | formIsHidden = True
-                                            , isEditingSectionTitle = False
-                                            , title = section.newTitle_
+                                            , isEditingCategoryTitle = False
+                                            , title = category.newTitle_
                                         }
 
                                 Nothing ->
                                     Nothing
                         )
                         model.mods
-              }
-            , Cmd.none
-            )
-
-        SetNewSectionTitle sectionId title ->
+            in
             ( { model
                 | mods =
-                    Dict.update sectionId
+                    updatedMods
+              }
+            , case Dict.get categoryId updatedMods of
+                Just category ->
+                    Http.post
+                        { url = "/api/save"
+                        , body =
+                            Http.jsonBody <|
+                                Encode.object
+                                    [ ( "tag", Encode.string "SaveNewCategoryTitle" )
+                                    , ( "payload", Encode.string category.newTitle_ )
+                                    ]
+                        , expect = Http.expectString SaveNewCategoryTitleResponse
+                        }
+
+                Nothing ->
+                    Cmd.none
+            )
+
+        SaveNewCategoryTitleResponse res ->
+            let
+                _ =
+                    Debug.log "res" res
+            in
+            ( model, Cmd.none )
+
+        SetNewCategoryTitle categoryId title ->
+            ( { model
+                | mods =
+                    Dict.update categoryId
                         (\v ->
                             case v of
-                                Just section ->
+                                Just category ->
                                     Just
-                                        { section
+                                        { category
                                             | formIsHidden = True
                                             , newTitle_ = title
                                         }
@@ -457,16 +515,16 @@ update msg model =
             , Cmd.none
             )
 
-        ToggleEditSection sectionId ->
+        ToggleEditCategory categoryId ->
             ( { model
                 | mods =
-                    Dict.update sectionId
+                    Dict.update categoryId
                         (\v ->
                             case v of
-                                Just section ->
+                                Just category ->
                                     Just
-                                        { section
-                                            | isEditingSectionTitle = not section.isEditingSectionTitle
+                                        { category
+                                            | isEditingCategoryTitle = not category.isEditingCategoryTitle
                                             , formIsHidden = True
                                         }
 
@@ -478,17 +536,17 @@ update msg model =
             , Cmd.none
             )
 
-        ClosePanel sectionTitle id ->
+        ClosePanel categoryTitle id ->
             ( { model
                 | mods =
-                    Dict.update sectionTitle
+                    Dict.update categoryTitle
                         (\v ->
                             case v of
-                                Just section ->
+                                Just category ->
                                     Just
-                                        { section
+                                        { category
                                             | mods =
-                                                section.mods
+                                                category.mods
                                                     |> List.map
                                                         (\m ->
                                                             --todo
@@ -508,17 +566,17 @@ update msg model =
             , Cmd.none
             )
 
-        OpenPanel sectionTitle id panel ->
+        OpenPanel categoryTitle id panel ->
             ( { model
                 | mods =
-                    Dict.update sectionTitle
+                    Dict.update categoryTitle
                         (\v ->
                             case v of
-                                Just section ->
+                                Just category ->
                                     Just
-                                        { section
+                                        { category
                                             | mods =
-                                                section.mods
+                                                category.mods
                                                     |> List.map
                                                         (\m ->
                                                             --todo
@@ -538,18 +596,18 @@ update msg model =
             , Cmd.none
             )
 
-        ToggleNewLinkForm sectionTitle ->
+        ToggleNewLinkForm categoryTitle ->
             ( { model
                 | mods =
-                    Dict.update sectionTitle
+                    Dict.update categoryTitle
                         (\v ->
                             case v of
-                                Just section ->
+                                Just category ->
                                     Just
-                                        { section
-                                            | formIsHidden = not section.formIsHidden
-                                            , isEditingSectionTitle = False
-                                            , newTitle_ = section.title
+                                        { category
+                                            | formIsHidden = not category.formIsHidden
+                                            , isEditingCategoryTitle = False
+                                            , newTitle_ = category.title
                                         }
 
                                 Nothing ->
@@ -560,16 +618,16 @@ update msg model =
             , Cmd.none
             )
 
-        SetNewUrl sectionTitle url ->
+        SetNewUrl categoryTitle url ->
             -- todo debounce fetching suggested title
             ( { model
                 | mods =
-                    Dict.update sectionTitle
+                    Dict.update categoryTitle
                         (\v ->
                             case v of
-                                Just section ->
+                                Just category ->
                                     Just
-                                        { section
+                                        { category
                                             | newUrl = url
                                             , suggestedTitle = Loading
                                             , savingState = NotAsked
@@ -584,22 +642,22 @@ update msg model =
                 |> Maybe.map
                     (Scraper.fetchTitle
                         (RemoteData.fromResult
-                            >> FetchTitleResponse sectionTitle
+                            >> FetchTitleResponse categoryTitle
                         )
                     )
                 |> Maybe.withDefault
-                    (delay 0 (FetchTitleResponse sectionTitle (Success "")))
+                    (delay 0 (FetchTitleResponse categoryTitle (Success "")))
             )
 
-        FetchTitleResponse sectionTitle (Success title) ->
+        FetchTitleResponse categoryTitle (Success title) ->
             ( { model
                 | mods =
-                    Dict.update sectionTitle
+                    Dict.update categoryTitle
                         (\v ->
                             case v of
-                                Just section ->
+                                Just category ->
                                     Just
-                                        { section
+                                        { category
                                             | suggestedTitle = Success title
                                             , newTitle = title
                                         }
@@ -612,21 +670,21 @@ update msg model =
             , Cmd.none
             )
 
-        FetchTitleResponse sectionTitle (Failure why) ->
+        FetchTitleResponse categoryTitle (Failure why) ->
             ( model, Cmd.none )
 
-        FetchTitleResponse sectionTitle _ ->
+        FetchTitleResponse categoryTitle _ ->
             ( model, Cmd.none )
 
-        UseSuggestedTitle sectionTitle title ->
-            update (SetNewTitle sectionTitle title)
+        UseSuggestedTitle categoryTitle title ->
+            update (SetNewTitle categoryTitle title)
                 { model
                     | mods =
-                        Dict.update sectionTitle
+                        Dict.update categoryTitle
                             (\v ->
                                 case v of
-                                    Just section ->
-                                        Just { section | suggestedTitle = NotAsked }
+                                    Just category ->
+                                        Just { category | suggestedTitle = NotAsked }
 
                                     Nothing ->
                                         Nothing
@@ -634,14 +692,14 @@ update msg model =
                             model.mods
                 }
 
-        SetNewTitle sectionTitle title ->
+        SetNewTitle categoryTitle title ->
             ( { model
                 | mods =
-                    Dict.update sectionTitle
+                    Dict.update categoryTitle
                         (\v ->
                             case v of
-                                Just section ->
-                                    Just { section | newTitle = title }
+                                Just category ->
+                                    Just { category | newTitle = title }
 
                                 Nothing ->
                                     Nothing
@@ -651,14 +709,14 @@ update msg model =
             , Cmd.none
             )
 
-        SetNewDescription sectionTitle description ->
+        SetNewDescription categoryTitle description ->
             ( { model
                 | mods =
-                    Dict.update sectionTitle
+                    Dict.update categoryTitle
                         (\v ->
                             case v of
-                                Just section ->
-                                    Just { section | newDescription = description }
+                                Just category ->
+                                    Just { category | newDescription = description }
 
                                 Nothing ->
                                     Nothing
@@ -668,69 +726,82 @@ update msg model =
             , Cmd.none
             )
 
-        AddLink sectionTitle ->
-            --todo
+        AddLink categoryTitle ->
+            --todo use id
             -- validate fields
-            ( { model
-                | mods =
-                    Dict.update sectionTitle
+            let
+                updatedMods =
+                    Dict.update categoryTitle
                         (\v ->
                             case v of
-                                Just section ->
-                                    Just { section | savingState = Loading }
+                                Just category ->
+                                    Just { category | savingState = Loading }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.mods
+            in
+            ( { model
+                | mods =
+                    updatedMods
+              }
+            , updatedMods
+                |> Dict.get categoryTitle
+                |> Maybe.map
+                    (\cat ->
+                        let
+                            newLink =
+                                { url = cat.newUrl
+                                , description = cat.newDescription
+                                , title = cat.newTitle
+                                }
+                        in
+                        Http.post
+                            { url = "/api/"
+                            , body =
+                                Http.jsonBody <|
+                                    Encode.object
+                                        [ ( "tag", Encode.string "AddLink" )
+                                        , ( "payload", encodeNewLink newLink )
+                                        ]
+                            , expect = Http.expectJson (RemoteData.fromResult >> AddLinkResponse categoryTitle) decodeMod
+                            }
+                    )
+                |> Maybe.withDefault Cmd.none
+            )
+
+        AddLinkResponse categoryTitle (Success newLink) ->
+            ( { model
+                | mods =
+                    Dict.update categoryTitle
+                        (\v ->
+                            case v of
+                                Just category ->
+                                    Just { category | mods = newLink :: category.mods }
 
                                 Nothing ->
                                     Nothing
                         )
                         model.mods
               }
-            , delay 1000 (AddLinkResponse sectionTitle (Success ()))
+            , Cmd.none
             )
 
-        AddLinkResponse sectionTitle (Success ()) ->
-            case Dict.get sectionTitle model.mods of
-                Just section ->
-                    case Url.fromString section.newUrl of
-                        Just url ->
-                            let
-                                newUrl =
-                                    { url = url
-                                    , description = section.newDescription
-                                    , title = section.newTitle
-                                    , panel = Nothing
-                                    , id = Url.toString url
-                                    }
-
-                                fixMe =
-                                    newModSection sectionTitle
-                            in
-                            ( { model
-                                | mods =
-                                    Dict.update sectionTitle
-                                        (\v ->
-                                            case v of
-                                                Just sect ->
-                                                    Just { fixMe | mods = newUrl :: section.mods }
-
-                                                Nothing ->
-                                                    Nothing
-                                        )
-                                        model.mods
-                              }
-                            , Cmd.none
-                            )
-
-                        Nothing ->
-                            ( model, Cmd.none )
-
-                Nothing ->
-                    ( model, Cmd.none )
-
-        AddLinkResponse sectionTitle _ ->
+        AddLinkResponse categoryTitle _ ->
+            -- todo error
             ( model, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
+
+
+
+--todo cateogry update helper
+-- updateCategory categoryId (fn)
+--todo new link update helper
+-- updateNewLink cateogryId
+-- updateCategory
 
 
 subscriptions : Model -> Sub Msg
