@@ -36,21 +36,29 @@ type alias Model =
 
 
 type alias Mods =
-    Dict String ModSection
+    Dict SectionId ModSection
+
+
+type alias SectionId =
+    String
 
 
 type alias ModSection =
     { formIsHidden : Bool
     , suggestedTitle : WebData String
     , newUrl : String
-    , newTitle : String
+    , newTitle : String -- new link title -- todo move to form
     , newDescription : String
     , mods : List Mod
     , savingState : WebData ()
+    , isEditingSectionTitle : Bool
+    , id : SectionId
+    , title : String
+    , newTitle_ : String -- new section title
     }
 
 
-newModSection =
+newModSection id =
     { formIsHidden = True
     , suggestedTitle = NotAsked
     , newUrl = ""
@@ -58,16 +66,20 @@ newModSection =
     , newDescription = ""
     , mods = []
     , savingState = NotAsked
+    , isEditingSectionTitle = False
+    , id = id
+    , title = id
+    , newTitle_ = id
     }
 
 
 initialMods =
-    [ ( "Engine", newModSection )
-    , ( "Exterior", newModSection )
-    , ( "Interior", newModSection )
-    , ( "Suspension", newModSection )
-    , ( "Wheels", newModSection )
-    , ( "Misc", newModSection )
+    [ ( "a", newModSection "Engine" )
+    , ( "b", newModSection "Exterior" )
+    , ( "c", newModSection "Interior" )
+    , ( "d", newModSection "Suspension" )
+    , ( "e", newModSection "Wheels" )
+    , ( "f", newModSection "Misc" )
     ]
 
 
@@ -94,28 +106,58 @@ view model =
                         []
                         (model.mods
                             |> Dict.foldr
-                                (\k v acc ->
+                                (\sectionId v acc ->
                                     Html.li []
                                         [ Html.div [ Attributes.class "flex items-center w-full px-1 py-1 border-b border-gray-100" ]
-                                            [ Html.p [ Attributes.class "font-semibold mr-auto" ]
-                                                [ Html.text k ]
+                                            [ Html.p
+                                                [ Attributes.class "font-semibold mr-auto"
+                                                , Attributes.classList [ ( "hidden", v.isEditingSectionTitle ) ]
+                                                ]
+                                                [ Html.text v.title
+                                                , Html.button
+                                                    [ Attributes.class "text-xs ml-2"
+                                                    , Events.onClick <| ToggleEditSection sectionId
+                                                    ]
+                                                    [ Html.text "Edit" ]
+                                                ]
+                                            , Html.div
+                                                [ Attributes.class " mr-auto"
+                                                , Attributes.classList
+                                                    [ ( "hidden", not v.isEditingSectionTitle )
+                                                    , ( "font-semibold block", True )
+                                                    ]
+                                                ]
+                                                [ Html.input
+                                                    [ Attributes.value v.newTitle_
+                                                    , Attributes.class "border px-1"
+                                                    , Events.onInput <| SetNewSectionTitle sectionId
+                                                    ]
+                                                    []
+                                                , Html.button
+                                                    [ Attributes.class "ml-1 text-xs"
+
+                                                    -- , Events.onClick <| ToggleEditSection sectionId
+                                                    , Events.onClick <| SaveNewSectionTitle sectionId
+                                                    ]
+                                                    [ Html.text "Save" ]
+                                                ]
                                             , Html.button
                                                 [ Attributes.type_ "button"
                                                 , Attributes.class "py-2 rounded-sm text-sm"
-                                                , Events.onClick <| ToggleNewLinkForm k
+                                                , Events.onClick <| ToggleNewLinkForm sectionId
                                                 ]
                                                 [ Html.text "Add Link" ]
                                             ]
-                                        , viewNewLink k v
+                                        , viewNewLinkForm sectionId v
                                         , Html.div [ Attributes.class "px-1 py-px bg-gray-200" ]
                                             (if True then
                                                 v.mods
-                                                    |> List.map (viewLink k)
+                                                    |> List.map (viewLink sectionId)
 
                                              else
                                                 v.mods
                                                     |> List.take 3
-                                                    |> List.map (viewLink k)
+                                                    |> List.map (viewLink sectionId)
                                             )
                                         ]
                                         :: acc
@@ -130,8 +172,8 @@ view model =
         ]
 
 
-viewNewLink : String -> ModSection -> Html Msg
-viewNewLink sectionTitle section =
+viewNewLinkForm : String -> ModSection -> Html Msg
+viewNewLinkForm sectionTitle section =
     Html.form
         [ Attributes.classList
             [ ( "hidden"
@@ -362,12 +404,80 @@ type Msg
     | AddLinkResponse SectionTitle (WebData ())
     | OpenPanel SectionTitle String MorePanel
     | ClosePanel SectionTitle String
+    | ToggleEditSection String
+    | SetNewSectionTitle SectionTitle String
+    | SaveNewSectionTitle SectionTitle
+      -- | SaveUpdatedTitle SectionTitle
     | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        SaveNewSectionTitle sectionId ->
+            ( { model
+                | mods =
+                    Dict.update sectionId
+                        (\v ->
+                            case v of
+                                Just section ->
+                                    Just
+                                        { section
+                                            | formIsHidden = True
+                                            , isEditingSectionTitle = False
+                                            , title = section.newTitle_
+                                        }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.mods
+              }
+            , Cmd.none
+            )
+
+        SetNewSectionTitle sectionId title ->
+            ( { model
+                | mods =
+                    Dict.update sectionId
+                        (\v ->
+                            case v of
+                                Just section ->
+                                    Just
+                                        { section
+                                            | formIsHidden = True
+                                            , newTitle_ = title
+                                        }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.mods
+              }
+            , Cmd.none
+            )
+
+        ToggleEditSection sectionId ->
+            ( { model
+                | mods =
+                    Dict.update sectionId
+                        (\v ->
+                            case v of
+                                Just section ->
+                                    Just
+                                        { section
+                                            | isEditingSectionTitle = not section.isEditingSectionTitle
+                                            , formIsHidden = True
+                                        }
+
+                                Nothing ->
+                                    Nothing
+                        )
+                        model.mods
+              }
+            , Cmd.none
+            )
+
         ClosePanel sectionTitle id ->
             ( { model
                 | mods =
@@ -435,7 +545,12 @@ update msg model =
                         (\v ->
                             case v of
                                 Just section ->
-                                    Just { section | formIsHidden = not section.formIsHidden }
+                                    Just
+                                        { section
+                                            | formIsHidden = not section.formIsHidden
+                                            , isEditingSectionTitle = False
+                                            , newTitle_ = section.title
+                                        }
 
                                 Nothing ->
                                     Nothing
@@ -585,6 +700,9 @@ update msg model =
                                     , panel = Nothing
                                     , id = Url.toString url
                                     }
+
+                                fixMe =
+                                    newModSection sectionTitle
                             in
                             ( { model
                                 | mods =
@@ -592,7 +710,7 @@ update msg model =
                                         (\v ->
                                             case v of
                                                 Just sect ->
-                                                    Just { newModSection | mods = newUrl :: section.mods }
+                                                    Just { fixMe | mods = newUrl :: section.mods }
 
                                                 Nothing ->
                                                     Nothing
