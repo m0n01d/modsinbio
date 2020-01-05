@@ -16,6 +16,10 @@ import Task
 import Url
 
 
+
+--todo create and store default Modcategories Dict and union
+
+
 type alias Mod =
     { id : String
     , url : Maybe Url.Url
@@ -77,6 +81,22 @@ type alias CategoryId =
     Int
 
 
+decodeModCategory =
+    Decode.succeed ModCategory
+        |> Decode.hardcoded True
+        |> Decode.required "id" Decode.int
+        |> Decode.hardcoded False
+        |> Decode.custom (Decode.field "mods" (Decode.list decodeMod))
+        |> Decode.hardcoded ""
+        |> Decode.hardcoded ""
+        |> Decode.hardcoded ""
+        |> Decode.hardcoded ""
+        |> Decode.required "order" Decode.int
+        |> Decode.hardcoded RemoteData.NotAsked
+        |> Decode.hardcoded RemoteData.NotAsked
+        |> Decode.required "title" Decode.string
+
+
 type alias ModCategory =
     { formIsHidden : Bool
     , id : CategoryId
@@ -89,7 +109,7 @@ type alias ModCategory =
     , order : Int
     , savingState : WebData ()
     , suggestedTitle : WebData String
-    , title : String
+    , name : String
     }
 
 
@@ -139,7 +159,7 @@ view model =
             ]
         , Html.div [ Attributes.class "flex md:flex-row flex-col" ]
             [ Html.div [ Attributes.class "flex-1" ]
-                [ Html.div [ Attributes.class "mt-4 md:px-8" ]
+                [ Html.div [ Attributes.class "mt-4 md:px-8 pb-8" ]
                     [ Html.div []
                         [ Html.p [ Attributes.class "capitalize text-center" ]
                             [ Html.text "my mods" ]
@@ -162,12 +182,13 @@ view model =
                                                     ]
                                                     [ Html.text "Edit" ]
                                                 ]
-                                            , Html.div
+                                            , Html.form
                                                 [ Attributes.class " mr-auto"
                                                 , Attributes.classList
                                                     [ ( "hidden", not category.isEditingCategoryTitle )
                                                     , ( "font-semibold block", True )
                                                     ]
+                                                , Events.onSubmit <| SaveNewCategoryId category.id
                                                 ]
                                                 [ Html.input
                                                     [ Attributes.value category.newTitle_
@@ -177,17 +198,29 @@ view model =
                                                     []
                                                 , Html.button
                                                     [ Attributes.class "ml-1 text-xs"
-                                                    , Events.onClick <| SaveNewCategoryId category.id
                                                     ]
                                                     [ Html.text "Save" ]
                                                 ]
                                             , Html.button
                                                 [ Attributes.type_ "button"
-                                                , Attributes.class "py-2 rounded-sm text-sm"
+                                                , Attributes.class "py-2 px-1 text-sm "
                                                 , Events.onClick <| ToggleNewLinkForm category.id
                                                 ]
-                                                [ Html.text "Add Link" ]
+                                                [ Html.text "Add Link"
+                                                , Html.p
+                                                    [ Attributes.class "text-right  text-xs text-gray-500 pb-px"
+                                                    ]
+                                                    [ Html.text <|
+                                                        String.join " "
+                                                            [ List.length category.mods
+                                                                |> String.fromInt
+                                                            , "links"
+                                                            ]
+                                                    ]
+                                                ]
                                             ]
+
+                                        -- ,
                                         , viewNewLinkForm category
                                         , Html.div [ Attributes.class "px-1 py-px bg-gray-200 rounded-sm" ]
                                             (if True then
@@ -209,26 +242,25 @@ view model =
                         , Events.onClick ToggleNewCategoryForm
                         ]
                         [ Html.text "+ Add New Category" ]
-                    , Html.form
-                        [ Attributes.classList
-                            [ ( "hidden"
-                              , not model.isNewCategoryFormVisible
-                              )
+                    , viewIf model.isNewCategoryFormVisible <|
+                        Html.form
+                            [ Events.onSubmit AddNewCategory
                             ]
-                        , Events.onSubmit AddNewCategory
-                        ]
-                        [ Html.label [ Attributes.class "font-medium" ]
-                            [ Html.text "Name:"
-                            , Html.input
-                                [ Attributes.class "ml-1 px-2 border py-1 mx-1"
-                                , Attributes.placeholder "Things and stuff"
-                                , Events.onInput SetNewCategoryName
-                                , Attributes.value model.newCategoryName
+                            [ Html.label [ Attributes.class "font-medium" ]
+                                [ Html.text "Name:"
+                                , Html.input
+                                    [ Attributes.class "ml-1 px-2 border py-1 mx-1"
+                                    , Attributes.placeholder "Audio/Video"
+                                    , Events.onInput SetNewCategoryName
+                                    , Attributes.value model.newCategoryName
+                                    ]
+                                    []
                                 ]
-                                []
+                            , Html.button
+                                [ Attributes.class "px-4 py-1 font-medium text-center rounded-sm border"
+                                ]
+                                [ Html.text "Save" ]
                             ]
-                        , Html.button [ Attributes.class "px-4 py-1 font-medium text-center rounded-sm border" ] [ Html.text "Save" ]
-                        ]
                     ]
                 ]
             , Html.div [ Attributes.class "flex-1" ]
@@ -461,7 +493,9 @@ viewPreviewLink =
 
 
 type Msg
-    = ToggleNewLinkForm CategoryId
+    = InitializeMyMods
+    | Initialized (WebData Mods)
+    | ToggleNewLinkForm CategoryId
     | SetNewUrl CategoryId String
     | FetchTitleResponse CategoryId (WebData String)
     | UseSuggestedTitle CategoryId String
@@ -482,9 +516,35 @@ type Msg
     | NoOp
 
 
+decodeModCategories =
+    Decode.field "categories" (Decode.list decodeModCategory)
+        |> Decode.andThen
+            (\categories ->
+                categories
+                    |> List.map (\c -> ( c.id, c ))
+                    |> Dict.fromList
+                    |> Decode.succeed
+            )
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        InitializeMyMods ->
+            ( model
+            , Http.post
+                { url = "/api/"
+                , body = Http.jsonBody <| Encode.object [ ( "tag", Encode.string "InitializeMyMods" ) ]
+                , expect = Http.expectJson (RemoteData.fromResult >> Initialized) decodeModCategories
+                }
+            )
+
+        Initialized (Success mods) ->
+            ( { model | mods = Dict.union mods model.mods }, Cmd.none )
+
+        Initialized _ ->
+            ( model, Cmd.none )
+
         SetNewCategoryName name ->
             ( { model | newCategoryName = name }, Cmd.none )
 
@@ -880,3 +940,11 @@ subscriptions model =
 delay n msg =
     Process.sleep n
         |> Task.perform (always msg)
+
+
+viewIf bool html =
+    if bool then
+        html
+
+    else
+        Html.text ""

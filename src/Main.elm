@@ -118,9 +118,9 @@ changeRouteTo maybeRoute model =
             ( Login { session = session }, Cmd.none )
 
         Just Route.Admin ->
-            ( MyMods <| MyMods.initialModel session
-            , Cmd.none
-            )
+            MyMods.update MyMods.InitializeMyMods (MyMods.initialModel session)
+                |> Tuple.mapFirst MyMods
+                |> Tuple.mapSecond (Cmd.map MyModsMsg)
 
         Just Route.Settings ->
             ( Settings { session = session }, Cmd.none )
