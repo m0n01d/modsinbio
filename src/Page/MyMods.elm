@@ -598,19 +598,13 @@ update msg model =
         SaveNewCategoryId categoryId ->
             let
                 updatedMods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just
-                                        { category
-                                            | formIsHidden = True
-                                            , isEditingCategoryTitle = False
-                                            , name = category.newTitle_
-                                        }
-
-                                Nothing ->
-                                    Nothing
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | formIsHidden = True
+                                , isEditingCategoryTitle = False
+                                , name = category.newTitle_
+                            }
                         )
                         model.mods
             in
@@ -645,18 +639,12 @@ update msg model =
         SetNewCategoryTitle categoryId title ->
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just
-                                        { category
-                                            | formIsHidden = True
-                                            , newTitle_ = title
-                                        }
-
-                                Nothing ->
-                                    Nothing
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | formIsHidden = True
+                                , newTitle_ = title
+                            }
                         )
                         model.mods
               }
@@ -666,18 +654,12 @@ update msg model =
         ToggleEditCategory categoryId ->
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just
-                                        { category
-                                            | isEditingCategoryTitle = not category.isEditingCategoryTitle
-                                            , formIsHidden = True
-                                        }
-
-                                Nothing ->
-                                    Nothing
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | isEditingCategoryTitle = not category.isEditingCategoryTitle
+                                , formIsHidden = True
+                            }
                         )
                         model.mods
               }
@@ -687,27 +669,20 @@ update msg model =
         ClosePanel categoryId id ->
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just
-                                        { category
-                                            | mods =
-                                                category.mods
-                                                    |> List.map
-                                                        (\m ->
-                                                            --todo
-                                                            if m.id == id then
-                                                                { m | panel = Nothing }
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | mods =
+                                    category.mods
+                                        |> List.map
+                                            (\m ->
+                                                if m.id == id then
+                                                    { m | panel = Nothing }
 
-                                                            else
-                                                                m
-                                                        )
-                                        }
-
-                                Nothing ->
-                                    Nothing
+                                                else
+                                                    m
+                                            )
+                            }
                         )
                         model.mods
               }
@@ -717,27 +692,20 @@ update msg model =
         OpenPanel categoryId id panel ->
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just
-                                        { category
-                                            | mods =
-                                                category.mods
-                                                    |> List.map
-                                                        (\m ->
-                                                            --todo
-                                                            if m.id == id then
-                                                                { m | panel = Just panel }
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | mods =
+                                    category.mods
+                                        |> List.map
+                                            (\m ->
+                                                if m.id == id then
+                                                    { m | panel = Just panel }
 
-                                                            else
-                                                                m
-                                                        )
-                                        }
-
-                                Nothing ->
-                                    Nothing
+                                                else
+                                                    m
+                                            )
+                            }
                         )
                         model.mods
               }
@@ -747,19 +715,13 @@ update msg model =
         ToggleNewLinkForm categoryId ->
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just
-                                        { category
-                                            | formIsHidden = not category.formIsHidden
-                                            , isEditingCategoryTitle = False
-                                            , newTitle_ = category.name
-                                        }
-
-                                Nothing ->
-                                    Nothing
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | formIsHidden = not category.formIsHidden
+                                , isEditingCategoryTitle = False
+                                , newTitle_ = category.name
+                            }
                         )
                         model.mods
               }
@@ -770,19 +732,13 @@ update msg model =
             -- todo debounce fetching suggested title
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just
-                                        { category
-                                            | newUrl = url
-                                            , suggestedTitle = Loading
-                                            , savingState = NotAsked
-                                        }
-
-                                Nothing ->
-                                    Nothing
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | newUrl = url
+                                , suggestedTitle = Loading
+                                , savingState = NotAsked
+                            }
                         )
                         model.mods
               }
@@ -800,18 +756,12 @@ update msg model =
         FetchTitleResponse categoryId (Success title) ->
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just
-                                        { category
-                                            | suggestedTitle = Success title
-                                            , newTitle = title
-                                        }
-
-                                Nothing ->
-                                    Nothing
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | suggestedTitle = Success title
+                                , newTitle = title
+                            }
                         )
                         model.mods
               }
@@ -828,14 +778,9 @@ update msg model =
             update (SetNewTitle categoryId title)
                 { model
                     | mods =
-                        Dict.update categoryId
-                            (\v ->
-                                case v of
-                                    Just category ->
-                                        Just { category | suggestedTitle = NotAsked }
-
-                                    Nothing ->
-                                        Nothing
+                        updateCategory categoryId
+                            (\category ->
+                                { category | suggestedTitle = NotAsked }
                             )
                             model.mods
                 }
@@ -843,14 +788,9 @@ update msg model =
         SetNewTitle categoryId title ->
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just { category | newTitle = title }
-
-                                Nothing ->
-                                    Nothing
+                    updateCategory categoryId
+                        (\category ->
+                            { category | newTitle = title }
                         )
                         model.mods
               }
@@ -860,14 +800,9 @@ update msg model =
         SetNewDescription categoryId description ->
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just { category | newDescription = description }
-
-                                Nothing ->
-                                    Nothing
+                    updateCategory categoryId
+                        (\category ->
+                            { category | newDescription = description }
                         )
                         model.mods
               }
@@ -879,14 +814,9 @@ update msg model =
             -- validate fields
             let
                 updatedMods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just { category | savingState = Loading }
-
-                                Nothing ->
-                                    Nothing
+                    updateCategory categoryId
+                        (\category ->
+                            { category | savingState = Loading }
                         )
                         model.mods
             in
@@ -922,20 +852,14 @@ update msg model =
         AddLinkResponse categoryId (Success newLink) ->
             ( { model
                 | mods =
-                    Dict.update categoryId
-                        (\v ->
-                            case v of
-                                Just category ->
-                                    Just
-                                        { category
-                                            | mods = newLink :: category.mods
-                                            , formIsHidden = True
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | mods = newLink :: category.mods
+                                , formIsHidden = True
 
-                                            -- todo reset new link form fields
-                                        }
-
-                                Nothing ->
-                                    Nothing
+                                -- todo reset new link form fields
+                            }
                         )
                         model.mods
               }
@@ -948,6 +872,10 @@ update msg model =
 
         NoOp ->
             ( model, Cmd.none )
+
+
+updateCategory categoryId fn categories =
+    Dict.update categoryId (Maybe.map fn) categories
 
 
 
