@@ -9,6 +9,7 @@ import Http
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
+import Network.Api as Api
 import Network.Scraper as Scraper
 import Process
 import RemoteData exposing (RemoteData(..), WebData)
@@ -21,7 +22,7 @@ import Url
 
 
 type alias Mod =
-    { id : String
+    { id : Int
     , url : Maybe Url.Url
     , urlString : String
     , title : String
@@ -37,11 +38,11 @@ decodeToUrl =
 
 decodeMod =
     Decode.succeed Mod
-        |> Decode.required "id" Decode.string
+        |> Decode.required "id" Decode.int
         |> Decode.custom (Decode.field "urlString" decodeToUrl)
         |> Decode.required "urlString" Decode.string
         |> Decode.required "title" Decode.string
-        |> Decode.required "description" Decode.string
+        |> Decode.optional "description" Decode.string ""
         |> Decode.hardcoded Nothing
 
 
@@ -86,7 +87,7 @@ decodeModCategory =
         |> Decode.hardcoded True
         |> Decode.required "id" Decode.int
         |> Decode.hardcoded False
-        |> Decode.custom (Decode.field "mods" (Decode.list decodeMod))
+        |> Decode.custom (Decode.field "links" (Decode.list decodeMod))
         |> Decode.hardcoded ""
         |> Decode.hardcoded ""
         |> Decode.hardcoded ""
@@ -94,7 +95,7 @@ decodeModCategory =
         |> Decode.required "order" Decode.int
         |> Decode.hardcoded RemoteData.NotAsked
         |> Decode.hardcoded RemoteData.NotAsked
-        |> Decode.required "title" Decode.string
+        |> Decode.required "name" Decode.string
 
 
 type alias ModCategory =
@@ -113,7 +114,7 @@ type alias ModCategory =
     }
 
 
-newModCategory title id =
+newModCategory name id =
     { formIsHidden = True
     , suggestedTitle = NotAsked
     , newUrl = ""
@@ -123,8 +124,8 @@ newModCategory title id =
     , savingState = NotAsked
     , isEditingCategoryTitle = False
     , id = id
-    , title = title
-    , newTitle_ = title
+    , name = name
+    , newTitle_ = name
     , order = id -- order
     }
 
@@ -175,7 +176,7 @@ view model =
                                                 [ Attributes.class "font-semibold mr-auto"
                                                 , Attributes.classList [ ( "hidden", category.isEditingCategoryTitle ) ]
                                                 ]
-                                                [ Html.text category.title
+                                                [ Html.text category.name
                                                 , Html.button
                                                     [ Attributes.class "text-xs ml-2"
                                                     , Events.onClick <| ToggleEditCategory category.id
@@ -492,9 +493,13 @@ viewPreviewLink =
         ]
 
 
+type alias LinkId =
+    Int
+
+
 type Msg
     = InitializeMyMods
-    | Initialized (WebData Mods)
+    | Initialized (Result Api.Error Mods)
     | ToggleNewLinkForm CategoryId
     | SetNewUrl CategoryId String
     | FetchTitleResponse CategoryId (WebData String)
@@ -503,8 +508,8 @@ type Msg
     | SetNewDescription CategoryId String
     | AddLink CategoryId
     | AddLinkResponse CategoryId (WebData Mod)
-    | OpenPanel CategoryId String MorePanel
-    | ClosePanel CategoryId String
+    | OpenPanel CategoryId LinkId MorePanel
+    | ClosePanel CategoryId LinkId
     | ToggleEditCategory CategoryId
     | SetNewCategoryTitle CategoryId String
     | SaveNewCategoryId CategoryId
@@ -527,19 +532,40 @@ decodeModCategories =
             )
 
 
+categoriesQuery =
+    """
+query Categories {
+    categories{
+        name, order, id, links {
+            id, title, urlString
+        }
+    }
+}
+"""
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        session =
+            model.session
+
+        document =
+            Api.document categoriesQuery []
+    in
     case msg of
         InitializeMyMods ->
             ( model
-            , Http.post
-                { url = "/api/"
-                , body = Http.jsonBody <| Encode.object [ ( "tag", Encode.string "InitializeMyMods" ) ]
-                , expect = Http.expectJson (RemoteData.fromResult >> Initialized) decodeModCategories
-                }
+              -- , Http.post
+              --     { url = "/api/"
+              --     , body = Http.jsonBody <| Encode.object [ ( "tag", Encode.string "InitializeMyMods" ) ]
+              --     , expect = Http.expectJson (RemoteData.fromResult >> Initialized) decodeModCategories
+              --     }
+            , Api.query session document Nothing decodeModCategories
+                |> Task.attempt Initialized
             )
 
-        Initialized (Success mods) ->
+        Initialized (Ok mods) ->
             ( { model | mods = Dict.union mods model.mods }, Cmd.none )
 
         Initialized _ ->
@@ -580,7 +606,7 @@ update msg model =
                                         { category
                                             | formIsHidden = True
                                             , isEditingCategoryTitle = False
-                                            , title = category.newTitle_
+                                            , name = category.newTitle_
                                         }
 
                                 Nothing ->
@@ -729,7 +755,7 @@ update msg model =
                                         { category
                                             | formIsHidden = not category.formIsHidden
                                             , isEditingCategoryTitle = False
-                                            , newTitle_ = category.title
+                                            , newTitle_ = category.name
                                         }
 
                                 Nothing ->
