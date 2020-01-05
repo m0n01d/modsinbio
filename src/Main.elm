@@ -139,36 +139,41 @@ changeRouteTo maybeRoute model =
 
 view : Model -> Document Msg
 view model =
-    { title = "hi"
+    let
+        { title, content } =
+            viewContent model
+    in
+    { title = title
     , body =
         [ div [ Attributes.class "container mx-auto" ]
             [ navbar model
-            , viewContent model
+            , Html.main_ [ Attributes.class "pt-12 px-2" ] [ content ]
             ]
         ]
     }
 
 
 navbar model =
-    Html.header [ Attributes.class "h-6 py-4 px-2 border-b border-grey-500 flex items-center" ]
+    Html.header [ Attributes.class "h-6 py-8 px-2 border-b border-grey-500 flex items-center" ]
         [ Html.text "Navbar"
         ]
 
 
-viewContent : Model -> Html Msg
+viewContent : Model -> { title : String, content : Html Msg }
 viewContent model =
-    Html.main_ [ Attributes.class "mt-4 px-2" ]
-        [ case model of
-            Home m ->
-                Home.view
+    case model of
+        Home m ->
+            { title = "Mods in Bio", content = Home.view }
 
-            MyMods subModel ->
+        MyMods subModel ->
+            { title = " My Mods - Mods in Bio"
+            , content =
                 MyMods.view subModel
                     |> Html.map MyModsMsg
+            }
 
-            _ ->
-                Html.text ""
-        ]
+        _ ->
+            { title = "x", content = Html.text "" }
 
 
 
