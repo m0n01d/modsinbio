@@ -87,7 +87,7 @@ decodeModCategory =
         |> Decode.hardcoded True
         |> Decode.required "id" Decode.int
         |> Decode.hardcoded False
-        |> Decode.custom (Decode.field "links" (Decode.list decodeMod))
+        |> Decode.optional "links" (Decode.list decodeMod) []
         |> Decode.hardcoded ""
         |> Decode.hardcoded ""
         |> Decode.hardcoded ""
@@ -516,8 +516,8 @@ type Msg
     | SaveNewCategoryIdResponse (Result Http.Error String)
     | ToggleNewCategoryForm
     | AddNewCategory
+    | AddNewCategoryResponse (Result Api.Error ModCategory)
     | SetNewCategoryName String
-      -- | SaveUpdatedTitle CategoryId
     | NoOp
 
 
@@ -549,18 +549,14 @@ update msg model =
     let
         session =
             model.session
-
-        document =
-            Api.document categoriesQuery []
     in
     case msg of
         InitializeMyMods ->
+            let
+                document =
+                    Api.document categoriesQuery []
+            in
             ( model
-              -- , Http.post
-              --     { url = "/api/"
-              --     , body = Http.jsonBody <| Encode.object [ ( "tag", Encode.string "InitializeMyMods" ) ]
-              --     , expect = Http.expectJson (RemoteData.fromResult >> Initialized) decodeModCategories
-              --     }
             , Api.query session document Nothing decodeModCategories
                 |> Task.attempt Initialized
             )
@@ -576,21 +572,58 @@ update msg model =
 
         AddNewCategory ->
             let
-                n =
-                    model.mods
-                        |> Dict.toList
-                        |> List.length
+                document =
+                    """
+mutation InsertCategory($objects: [categories_insert_input!]!) {
+  __typename
+  insert_categories(objects: $objects) {
+    returning {
+      id, name, order
+    }
+  }
+}
 
-                id =
-                    String.fromInt n
+"""
+
+                encodeCategory { name, order, owner } =
+                    --@todo owner
+                    Encode.object
+                        [ ( "name", Encode.string name )
+                        , ( "order", Encode.int order )
+                        , ( "owner", Encode.int 1 )
+                        ]
+
+                encodeVars =
+                    Encode.object
+                        [ ( "objects"
+                          , Encode.list encodeCategory [ { name = model.newCategoryName, order = 8, owner = 1 } ]
+                          )
+                        ]
+
+                decoder =
+                    Decode.succeed identity
+                        |> Decode.requiredAt [ "insert_categories", "returning", "0" ] decodeModCategory
             in
+            ( model
+            , Api.query session (Api.document document []) (Just encodeVars) decoder
+                |> Task.attempt AddNewCategoryResponse
+            )
+
+        AddNewCategoryResponse (Ok category) ->
             ( { model
-                | mods = Dict.insert n (newModCategory model.newCategoryName n) model.mods
+                | mods = Dict.insert category.id category model.mods
                 , isNewCategoryFormVisible = False
                 , newCategoryName = ""
               }
             , Cmd.none
             )
+
+        AddNewCategoryResponse x ->
+            let
+                _ =
+                    Debug.log "@todo" x
+            in
+            ( model, Cmd.none )
 
         ToggleNewCategoryForm ->
             ( { model | isNewCategoryFormVisible = not model.isNewCategoryFormVisible }, Cmd.none )
