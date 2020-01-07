@@ -631,9 +631,9 @@ mutation InsertCategory($objects: [categories_insert_input!]!) {
                             """
 mutation MyMutation($id:Int!, $name:String!) {
   __typename
-  update_categories(where: {id: {_eq: $id}}, _set: {name: $name, order :$order}) {
+  update_categories(where: {id: {_eq: $id}}, _set: {name: $name}) {
     returning {
-      id, name, links {id}
+      id, name, order, links {id, urlString, title, description}
     }
   }
 }
