@@ -1,5 +1,7 @@
 module Page.MyMods exposing (..)
 
+import Data.Category as Category exposing (CategoryId, ModCategory)
+import Data.Link as Link exposing (Link, MorePanel(..))
 import Data.Session exposing (Session)
 import Dict exposing (Dict)
 import Html exposing (Html)
@@ -8,8 +10,7 @@ import Html.Events as Events
 import Http
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
-import Json.Encode as Encode exposing (Value)
-import Json.Encode.Extra as Encode
+import Json.Encode as Encode
 import Network.Api as Api
 import Network.Scraper as Scraper
 import Process
@@ -19,38 +20,16 @@ import Url
 
 
 
---todo edit titles
---todo create and store default Modcategories Dict and union
-
-
-type alias Mod =
-    { id : Int
-    , url : Maybe Url.Url
-    , urlString : String
-    , title : String
-    , description : String
-    , panel : Maybe MorePanel
-    }
-
-
-decodeToUrl =
-    Decode.string
-        |> Decode.map Url.fromString
-
-
-decodeMod =
-    Decode.succeed Mod
-        |> Decode.required "id" Decode.int
-        |> Decode.custom (Decode.field "urlString" decodeToUrl)
-        |> Decode.required "urlString" Decode.string
-        |> Decode.required "title" Decode.string
-        |> Decode.optional "description" Decode.string ""
-        |> Decode.hardcoded Nothing
-
-
-type MorePanel
-    = DeletionPanel
-    | AnalyticsPanel
+-- @TODO code organization/cleanup
+-- @TODO toggle `active`
+-- @TODO delete links
+-- @todo delete categories
+--todo new link update helper
+-- updateNewLink cateogryId
+-- updateCategory
+-- @TODO create and store default Modcategories Dict and union
+-- db trigger?
+-- @TODO profile page template renders model
 
 
 type alias Model =
@@ -68,67 +47,8 @@ type alias NewLink =
     }
 
 
-protocolToString p =
-    case p of
-        Url.Https ->
-            "https"
-
-        Url.Http ->
-            "http"
-
-
-encodeNewLink { urlString, description, title, category_id, fragment, host, path, protocol, query } =
-    Encode.object
-        [ ( "urlString", Encode.string urlString )
-        , ( "description", Encode.string description )
-        , ( "title", Encode.string title )
-        , ( "category_id", Encode.int category_id )
-        , ( "fragment", Encode.maybe Encode.string fragment )
-        , ( "host", Encode.string host )
-        , ( "path", Encode.string path )
-        , ( "protocol", Encode.string <| protocolToString protocol )
-        , ( "query", Encode.maybe Encode.string query )
-        ]
-
-
 type alias Mods =
     Dict CategoryId ModCategory
-
-
-type alias CategoryId =
-    Int
-
-
-decodeModCategory =
-    Decode.succeed ModCategory
-        |> Decode.hardcoded True
-        |> Decode.required "id" Decode.int
-        |> Decode.hardcoded False
-        |> Decode.optional "links" (Decode.list decodeMod) []
-        |> Decode.hardcoded ""
-        |> Decode.hardcoded ""
-        |> Decode.hardcoded ""
-        |> Decode.required "order" Decode.int
-        |> Decode.hardcoded RemoteData.NotAsked
-        |> Decode.hardcoded RemoteData.NotAsked
-        |> Decode.required "name" Decode.string
-        |> Decode.required "name" Decode.string
-
-
-type alias ModCategory =
-    { formIsHidden : Bool
-    , id : CategoryId
-    , isEditingCategoryTitle : Bool
-    , mods : List Mod
-    , newDescription : String
-    , newTitle : String -- new link title -- todo move to form
-    , newUrl : String
-    , order : Int
-    , savingState : WebData ()
-    , suggestedTitle : WebData String
-    , newName : String -- new category title
-    , name : String
-    }
 
 
 newModCategory name id =
@@ -148,12 +68,16 @@ newModCategory name id =
 
 
 initialMods =
-    [ newModCategory "Exterior"
-    , newModCategory "Interior"
-    , newModCategory "Suspension"
-    , newModCategory "Misc"
-    ]
-        |> List.indexedMap (\i x -> ( i, x i ))
+    []
+
+
+
+-- [ newModCategory "Exterior"
+-- , newModCategory "Interior"
+-- , newModCategory "Suspension"
+-- , newModCategory "Misc"
+-- ]
+--     |> List.indexedMap (\i x -> ( i, x i ))
 
 
 initialModel session =
@@ -520,7 +444,7 @@ type Msg
     | SetNewTitle CategoryId String
     | SetNewDescription CategoryId String
     | AddLink CategoryId
-    | AddLinkResponse CategoryId (Result Api.Error Mod)
+    | AddLinkResponse CategoryId (Result Api.Error Link)
     | OpenPanel CategoryId LinkId MorePanel
     | ClosePanel CategoryId LinkId
     | ToggleEditCategory CategoryId
@@ -533,29 +457,6 @@ type Msg
     | NoOp
 
 
-decodeModCategories =
-    Decode.field "categories" (Decode.list decodeModCategory)
-        |> Decode.andThen
-            (\categories ->
-                categories
-                    |> List.map (\c -> ( c.id, c ))
-                    |> Dict.fromList
-                    |> Decode.succeed
-            )
-
-
-categoriesQuery =
-    """
-query Categories {
-    categories{
-        name, order, id, links {
-            id, title, urlString
-        }
-    }
-}
-"""
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
@@ -566,10 +467,10 @@ update msg model =
         InitializeMyMods ->
             let
                 document =
-                    Api.document categoriesQuery []
+                    Api.document Category.queryDocument []
             in
             ( model
-            , Api.query session document Nothing decodeModCategories
+            , Api.query session document Nothing Category.decodeModCategories
                 |> Task.attempt Initialized
             )
 
@@ -584,40 +485,19 @@ update msg model =
 
         AddNewCategory ->
             let
-                document =
-                    """
-mutation InsertCategory($objects: [categories_insert_input!]!) {
-  __typename
-  insert_categories(objects: $objects) {
-    returning {
-      id, name, order
-    }
-  }
-}
-
-"""
-
-                encodeCategory { name, order, owner } =
-                    --@todo owner
-                    Encode.object
-                        [ ( "name", Encode.string name )
-                        , ( "order", Encode.int order )
-                        , ( "owner", Encode.int 1 )
-                        ]
-
                 encodedVars =
                     Encode.object
                         [ ( "objects"
-                          , Encode.list encodeCategory [ { name = model.newCategoryName, order = 8, owner = 1 } ]
+                          , Encode.list Category.encode [ { name = model.newCategoryName, order = 8, owner = 1 } ]
                           )
                         ]
 
                 decoder =
                     Decode.succeed identity
-                        |> Decode.requiredAt [ "insert_categories", "returning", "0" ] decodeModCategory
+                        |> Decode.requiredAt [ "insert_categories", "returning", "0" ] Category.decodeModCategory
             in
             ( model
-            , Api.query session (Api.document document []) (Just encodedVars) decoder
+            , Api.query session (Api.document Category.insert []) (Just encodedVars) decoder
                 |> Task.attempt CategoryResponse
             )
 
@@ -625,8 +505,6 @@ mutation InsertCategory($objects: [categories_insert_input!]!) {
             case Dict.get categoryId model.mods of
                 Just { newName } ->
                     let
-                        -- todo add Lite Decoder for ModCategory so i dont need links: (List Link)
-                        -- or maybe not since im using Dict.insert
                         document =
                             """
 mutation MyMutation($id:Int!, $name:String!) {
@@ -649,7 +527,7 @@ mutation MyMutation($id:Int!, $name:String!) {
                         decoder =
                             Decode.succeed identity
                                 |> Decode.requiredAt [ "update_categories", "returning" ]
-                                    (Decode.index 0 decodeModCategory)
+                                    (Decode.index 0 Category.decodeModCategory)
                     in
                     ( model
                     , Api.query session (Api.document document []) (Just encodedVars) decoder
@@ -671,7 +549,7 @@ mutation MyMutation($id:Int!, $name:String!) {
         CategoryResponse x ->
             let
                 _ =
-                    Debug.log "@todo" x
+                    Debug.log "@TODO error handling" x
             in
             ( model, Cmd.none )
 
@@ -852,8 +730,8 @@ mutation MyMutation($id:Int!, $name:String!) {
             )
 
         AddLink categoryId ->
-            --@todo graphql
-            -- validate fields
+            -- @TODO validate fields before submitting
+            --
             let
                 document =
                     """
@@ -901,13 +779,13 @@ mutation InsertLink($objects: [links_insert_input!]!) {
                                     encodedVars =
                                         Encode.object
                                             [ ( "objects"
-                                              , Encode.list encodeNewLink [ newLink ]
+                                              , Encode.list Link.encode [ newLink ]
                                               )
                                             ]
 
                                     decoder =
                                         Decode.succeed identity
-                                            |> Decode.requiredAt [ "insert_links", "returning" ] (Decode.index 0 decodeMod)
+                                            |> Decode.requiredAt [ "insert_links", "returning" ] (Decode.index 0 Link.decode)
                                 in
                                 Api.query session (Api.document document []) (Just encodedVars) decoder
                                     |> Task.attempt (AddLinkResponse categoryId)
@@ -927,7 +805,7 @@ mutation InsertLink($objects: [links_insert_input!]!) {
                                 | mods = newLink :: category.mods
                                 , formIsHidden = True
 
-                                -- todo reset new link form fields
+                                -- todo reset new link form fields after refactor to model
                             }
                         )
                         model.mods
@@ -936,7 +814,7 @@ mutation InsertLink($objects: [links_insert_input!]!) {
             )
 
         AddLinkResponse categoryId _ ->
-            -- todo error
+            -- todo error handling
             ( model, Cmd.none )
 
         NoOp ->
@@ -945,12 +823,6 @@ mutation InsertLink($objects: [links_insert_input!]!) {
 
 updateCategory categoryId fn =
     Dict.update categoryId (Maybe.map fn)
-
-
-
---todo new link update helper
--- updateNewLink cateogryId
--- updateCategory
 
 
 subscriptions : Model -> Sub Msg
