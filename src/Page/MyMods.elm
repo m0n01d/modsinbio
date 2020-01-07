@@ -20,13 +20,12 @@ import Url
 
 
 
--- @TODO code organization/cleanup
 -- @TODO toggle `active`
 -- @TODO delete links
 -- @todo delete categories
---todo new link update helper
+-- todo new link update helper
 -- updateNewLink cateogryId
--- updateCategory
+---- updateCategory
 -- @TODO create and store default Modcategories Dict and union
 -- db trigger?
 -- @TODO profile page template renders model
@@ -51,38 +50,9 @@ type alias Mods =
     Dict CategoryId ModCategory
 
 
-newModCategory name id =
-    { formIsHidden = True
-    , suggestedTitle = NotAsked
-    , newUrl = ""
-    , newTitle = ""
-    , newDescription = ""
-    , mods = []
-    , savingState = NotAsked
-    , isEditingCategoryTitle = False
-    , id = id
-    , name = name
-    , newName = name
-    , order = id -- order
-    }
-
-
-initialMods =
-    []
-
-
-
--- [ newModCategory "Exterior"
--- , newModCategory "Interior"
--- , newModCategory "Suspension"
--- , newModCategory "Misc"
--- ]
---     |> List.indexedMap (\i x -> ( i, x i ))
-
-
 initialModel session =
     { session = session
-    , mods = Dict.fromList initialMods
+    , mods = Dict.fromList []
     , isNewCategoryFormVisible = False
     , newCategoryName = ""
     }
@@ -94,7 +64,8 @@ view model =
         [ Html.div [ Attributes.class "md:px-8 mb-2" ]
             [ Html.p []
                 [ Html.text "My car:"
-                , Html.span [ Attributes.class "ml-1" ] [ Html.text "2018 Subaru WRX Premium" ]
+                , Html.span [ Attributes.class "ml-1" ]
+                    [ Html.text "2018 Subaru WRX Premium" ]
                 ]
             ]
         , Html.div [ Attributes.class "flex md:flex-row flex-col" ]
@@ -109,7 +80,7 @@ view model =
                         (model.mods
                             |> Dict.foldr
                                 (\categoryId category acc ->
-                                    Html.li []
+                                    Html.li [ Attributes.class "mb-4" ]
                                         [ Html.div [ Attributes.class "flex items-center w-full px-1 py-1 " ]
                                             [ Html.p
                                                 [ Attributes.class "font-semibold mr-auto"
@@ -162,7 +133,7 @@ view model =
 
                                         -- ,
                                         , viewNewLinkForm category
-                                        , Html.div [ Attributes.class "px-1 py-px bg-gray-200 rounded-sm" ]
+                                        , Html.div [ Attributes.class "px-px py-px bg-gray-200 rounded-sm" ]
                                             (if True then
                                                 category.mods
                                                     |> List.map (viewLink category.id)
@@ -279,7 +250,7 @@ viewNewLinkForm category =
 
 viewLink categoryId link =
     Html.li []
-        [ Html.div [ Attributes.class "bg-white my-1 px-2 py-1 rounded-sm" ]
+        [ Html.div [ Attributes.class "bg-white my-px px-2 py-1 rounded-sm" ]
             [ Html.p [] [ Html.text link.title ]
             , Html.p [ Attributes.class "truncate text-gray-700 text-sm mt-px" ]
                 [ Html.a
@@ -298,7 +269,7 @@ viewLink categoryId link =
                     , Html.input
                         [ Attributes.type_ "checkbox"
                         , Attributes.name <| String.join " " [ link.title, "enabled" ]
-                        , Attributes.checked True
+                        , Attributes.checked link.isActive
                         , Attributes.class "ml-1"
                         ]
                         []
