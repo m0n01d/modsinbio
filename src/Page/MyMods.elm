@@ -733,19 +733,6 @@ mutation MyMutation($id:Int!, $name:String!) {
             -- @TODO validate fields before submitting
             --
             let
-                document =
-                    """
-mutation InsertLink($objects: [links_insert_input!]!) {
-  __typename
-  insert_links(objects: $objects) {
-    returning {
-      id, title, urlString, description
-    }
-  }
-}
-
-"""
-
                 updatedMods =
                     updateCategory categoryId
                         (\category ->
@@ -787,7 +774,7 @@ mutation InsertLink($objects: [links_insert_input!]!) {
                                         Decode.succeed identity
                                             |> Decode.requiredAt [ "insert_links", "returning" ] (Decode.index 0 Link.decode)
                                 in
-                                Api.query session (Api.document document []) (Just encodedVars) decoder
+                                Api.query session (Api.document Link.insert []) (Just encodedVars) decoder
                                     |> Task.attempt (AddLinkResponse categoryId)
 
                             Nothing ->

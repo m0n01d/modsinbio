@@ -66,3 +66,21 @@ encode { urlString, description, title, category_id, fragment, host, path, proto
         , ( "protocol", Encode.string <| protocolToString protocol )
         , ( "query", Encode.maybe Encode.string query )
         ]
+
+
+
+-- query
+
+
+insert =
+    """
+mutation InsertLink($objects: [links_insert_input!]!) {
+  __typename
+  insert_links(objects: $objects) {
+    returning {
+      id, title, urlString, description
+    }
+  }
+}
+
+"""
