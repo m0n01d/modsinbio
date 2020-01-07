@@ -19,6 +19,7 @@ type alias Link =
     , title : String
     , description : String
     , panel : Maybe MorePanel
+    , isActive : Bool
     }
 
 
@@ -39,6 +40,7 @@ decode =
         |> Decode.required "title" Decode.string
         |> Decode.optional "description" Decode.string ""
         |> Decode.hardcoded Nothing
+        |> Decode.required "active" Decode.bool
 
 
 
@@ -78,7 +80,21 @@ mutation InsertLink($objects: [links_insert_input!]!) {
   __typename
   insert_links(objects: $objects) {
     returning {
-      id, title, urlString, description
+      id, title, urlString, description, active
+    }
+  }
+}
+
+"""
+
+
+updateIsActive =
+    """
+mutation UpdateIsActive($id:Int!, $is_active:Boolean!) {
+  __typename
+  update_links(_set:{active : $is_active} where: {id: {_eq: $id}}) {
+    returning {
+\t\t\tid, title, urlString, description, active
     }
   }
 }

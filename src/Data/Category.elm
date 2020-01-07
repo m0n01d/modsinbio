@@ -82,7 +82,7 @@ queryDocument =
 query Categories {
     categories{
         name, order, id, links {
-            id, title, urlString
+            id, title, urlString, active
         }
     }
 }
@@ -109,7 +109,7 @@ mutation UpdateCategory($id:Int!, $name:String!) {
   __typename
   update_categories(where: {id: {_eq: $id}}, _set: {name: $name}) {
     returning {
-      id, name, order, links {id, urlString, title, description}
+      id, name, order, links {id, urlString, title, description, active}
     }
   }
 }
