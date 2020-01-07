@@ -321,9 +321,7 @@ viewNewLinkForm category =
                     , Attributes.placeholder "Go fast parts"
                     , Events.onInput <| SetNewTitle categoryId
                     , Attributes.disabled (RemoteData.isNotAsked category.suggestedTitle)
-                    , category.suggestedTitle
-                        |> RemoteData.map Attributes.value
-                        |> RemoteData.withDefault (Attributes.name "")
+                    , Attributes.value category.newTitle
                     , Attributes.placeholder <|
                         -- consider using label to show fetching
                         if RemoteData.isLoading category.suggestedTitle then
