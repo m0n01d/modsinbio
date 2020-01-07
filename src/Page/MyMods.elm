@@ -505,19 +505,6 @@ update msg model =
             case Dict.get categoryId model.mods of
                 Just { newName } ->
                     let
-                        document =
-                            """
-mutation MyMutation($id:Int!, $name:String!) {
-  __typename
-  update_categories(where: {id: {_eq: $id}}, _set: {name: $name}) {
-    returning {
-      id, name, order, links {id, urlString, title, description}
-    }
-  }
-}
-
-"""
-
                         encodedVars =
                             Encode.object
                                 [ ( "id", Encode.int categoryId )
@@ -530,7 +517,7 @@ mutation MyMutation($id:Int!, $name:String!) {
                                     (Decode.index 0 Category.decodeModCategory)
                     in
                     ( model
-                    , Api.query session (Api.document document []) (Just encodedVars) decoder
+                    , Api.query session (Api.document Category.update []) (Just encodedVars) decoder
                         |> Task.attempt CategoryResponse
                     )
 
