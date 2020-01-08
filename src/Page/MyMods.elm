@@ -271,6 +271,7 @@ viewLink categoryId link =
                         , Attributes.name <| String.join " " [ link.title, "enabled" ]
                         , Attributes.checked link.isActive
                         , Attributes.class "ml-1"
+                        , Events.onClick <| ToggleLinkActive categoryId link
                         ]
                         []
                     ]
@@ -423,6 +424,8 @@ type Msg
     | SetNewCategoryName String
     | DeleteLink CategoryId Link
     | DeleteLinkResponse CategoryId (Result Api.Error Link.Id)
+    | ToggleLinkActive CategoryId Link
+    | ToggleLinkActiveResponse CategoryId (Result Api.Error Link)
     | NoOp
 
 
@@ -790,6 +793,52 @@ update msg model =
 
         DeleteLinkResponse categoryId _ ->
             Debug.todo "handle response"
+
+        ToggleLinkActive categoryId link ->
+            let
+                encodedVars =
+                    Encode.object
+                        [ ( "id", Link.encodeId link.id )
+                        , ( "is_active", Encode.bool <| not link.isActive )
+                        ]
+                        |> Just
+
+                decoder =
+                    Decode.succeed identity
+                        |> Decode.requiredAt [ "update_links", "returning" ]
+                            (Decode.index 0 Link.decode)
+            in
+            ( model
+            , Api.query session (Api.document Link.updateIsActive []) encodedVars decoder
+                |> Task.attempt (ToggleLinkActiveResponse categoryId)
+            )
+
+        ToggleLinkActiveResponse categoryId (Ok updatedLink) ->
+            ( { model
+                | mods =
+                    updateCategory categoryId
+                        (\category ->
+                            { category
+                                | links =
+                                    category.links
+                                        |> List.map
+                                            (\link ->
+                                                if link.id == updatedLink.id then
+                                                    updatedLink
+
+                                                else
+                                                    link
+                                            )
+                            }
+                        )
+                        model.mods
+              }
+            , Cmd.none
+            )
+
+        ToggleLinkActiveResponse categoryId link ->
+            -- todo error handling
+            ( model, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
