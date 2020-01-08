@@ -17,7 +17,7 @@ type alias ModCategory =
     { formIsHidden : Bool
     , id : CategoryId
     , isEditingCategoryTitle : Bool
-    , mods : List Link
+    , links : List Link
     , newDescription : String
     , newTitle : String -- new link title -- todo move to form
     , newUrl : String
