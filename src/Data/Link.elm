@@ -7,13 +7,25 @@ import Json.Encode.Extra as Encode
 import Url
 
 
+type Id
+    = Id Int
+
+
+id (Id identifier) =
+    identifier
+
+
+encodeId (Id identifier) =
+    Encode.int identifier
+
+
 type MorePanel
     = DeletionPanel
     | AnalyticsPanel
 
 
 type alias Link =
-    { id : Int
+    { id : Id
     , url : Maybe Url.Url
     , urlString : String
     , title : String
@@ -32,9 +44,14 @@ decodeToMaybeUrl =
         |> Decode.map Url.fromString
 
 
+decodeId =
+    Decode.int
+        |> Decode.map Id
+
+
 decode =
     Decode.succeed Link
-        |> Decode.required "id" Decode.int
+        |> Decode.required "id" decodeId
         |> Decode.custom (Decode.field "urlString" decodeToMaybeUrl)
         |> Decode.required "urlString" Decode.string
         |> Decode.required "title" Decode.string
@@ -95,6 +112,20 @@ mutation UpdateIsActive($id:Int!, $is_active:Boolean!) {
   update_links(_set:{active : $is_active} where: {id: {_eq: $id}}) {
     returning {
 \t\t\tid, title, urlString, description, active
+    }
+  }
+}
+
+"""
+
+
+deleteLink =
+    """
+mutation DeleteLInk($id: Int) {
+  __typename
+  delete_links(where: {id: {_eq: $id}}) {
+    returning {
+      id
     }
   }
 }
