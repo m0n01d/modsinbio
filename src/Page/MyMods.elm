@@ -123,7 +123,7 @@ view model =
                                                     ]
                                                     [ Html.text <|
                                                         String.join " "
-                                                            [ List.length category.mods
+                                                            [ List.length category.links
                                                                 |> String.fromInt
                                                             , "links"
                                                             ]
@@ -135,11 +135,11 @@ view model =
                                         , viewNewLinkForm category
                                         , Html.div [ Attributes.class "px-px py-px bg-gray-200 rounded-sm" ]
                                             (if True then
-                                                category.mods
+                                                category.links
                                                     |> List.map (viewLink category.id)
 
                                              else
-                                                category.mods
+                                                category.links
                                                     |> List.take 3
                                                     |> List.map (viewLink category.id)
                                             )
@@ -277,7 +277,7 @@ viewLink categoryId link =
                 , Html.div [ Attributes.class "ml-auto" ]
                     [ Html.button
                         [ Attributes.class "mx-1"
-                        , Events.onClick <| OpenPanel categoryId link.id DeletionPanel
+                        , Events.onClick <| DeleteLink categoryId link
                         ]
                         [ Html.text "Delete" ]
                     , Html.button [ Attributes.class "mx-1" ] [ Html.text "Analytics" ]
@@ -401,10 +401,6 @@ viewPreviewLink =
         ]
 
 
-type alias LinkId =
-    Int
-
-
 type Msg
     = InitializeMyMods
     | Initialized (Result Api.Error Mods)
@@ -416,8 +412,8 @@ type Msg
     | SetNewDescription CategoryId String
     | AddLink CategoryId
     | AddLinkResponse CategoryId (Result Api.Error Link)
-    | OpenPanel CategoryId LinkId MorePanel
-    | ClosePanel CategoryId LinkId
+    | OpenPanel CategoryId Link.Id MorePanel
+    | ClosePanel CategoryId Link.Id
     | ToggleEditCategory CategoryId
     | SetNewCategoryTitle CategoryId String
     | UpdateCategoryName CategoryId
@@ -425,6 +421,8 @@ type Msg
     | AddNewCategory
     | CategoryResponse (Result Api.Error ModCategory)
     | SetNewCategoryName String
+    | DeleteLink CategoryId Link
+    | DeleteLinkResponse CategoryId (Result Api.Error Link.Id)
     | NoOp
 
 
@@ -550,15 +548,15 @@ update msg model =
                     updateCategory categoryId
                         (\category ->
                             { category
-                                | mods =
-                                    category.mods
+                                | links =
+                                    category.links
                                         |> List.map
-                                            (\m ->
-                                                if m.id == id then
-                                                    { m | panel = Nothing }
+                                            (\link ->
+                                                if link.id == id then
+                                                    { link | panel = Nothing }
 
                                                 else
-                                                    m
+                                                    link
                                             )
                             }
                         )
@@ -573,8 +571,8 @@ update msg model =
                     updateCategory categoryId
                         (\category ->
                             { category
-                                | mods =
-                                    category.mods
+                                | links =
+                                    category.links
                                         |> List.map
                                             (\m ->
                                                 if m.id == id then
@@ -747,7 +745,7 @@ update msg model =
                     updateCategory categoryId
                         (\category ->
                             { category
-                                | mods = newLink :: category.mods
+                                | links = newLink :: category.links
                                 , formIsHidden = True
 
                                 -- todo reset new link form fields after refactor to model
@@ -761,6 +759,37 @@ update msg model =
         AddLinkResponse categoryId _ ->
             -- todo error handling
             ( model, Cmd.none )
+
+        DeleteLink categoryId link ->
+            let
+                encodedVars =
+                    Encode.object [ ( "id", Link.encodeId link.id ) ]
+                        |> Just
+
+                decoder =
+                    Decode.succeed identity
+                        |> Decode.requiredAt [ "delete_links", "returning" ]
+                            (Decode.index 0 (Decode.value |> Decode.map (always link.id)))
+            in
+            ( model
+            , Api.query session (Api.document Link.deleteLink []) encodedVars decoder
+                |> Task.attempt (DeleteLinkResponse categoryId)
+            )
+
+        DeleteLinkResponse categoryId (Ok id) ->
+            ( { model
+                | mods =
+                    updateCategory categoryId
+                        (\category ->
+                            { category | links = List.filter (.id >> (/=) id) category.links }
+                        )
+                        model.mods
+              }
+            , Cmd.none
+            )
+
+        DeleteLinkResponse categoryId _ ->
+            Debug.todo "handle response"
 
         NoOp ->
             ( model, Cmd.none )
