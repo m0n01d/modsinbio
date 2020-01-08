@@ -15,10 +15,6 @@ id (Id identifier) =
     identifier
 
 
-encodeId (Id identifier) =
-    Encode.int identifier
-
-
 type MorePanel
     = DeletionPanel
     | AnalyticsPanel
@@ -85,6 +81,10 @@ encode { urlString, description, title, category_id, fragment, host, path, proto
         , ( "protocol", Encode.string <| protocolToString protocol )
         , ( "query", Encode.maybe Encode.string query )
         ]
+
+
+encodeId (Id identifier) =
+    Encode.int identifier
 
 
 
