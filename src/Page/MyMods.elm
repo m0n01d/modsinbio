@@ -19,10 +19,20 @@ import Task
 import Url
 
 
+-- roles
+    -- driver
+    -- business
+    -- admin
+    -- public
 
--- @TODO toggle `active`
--- @TODO delete links
--- @todo delete categories
+-- @TODO authentication
+-- setup auth0
+    -- default to influencer role
+
+
+-- DB TRIGGER add categories on signup
+-- @TODO SOFT delete links
+-- @todo SOFT delete categories
 -- todo new link update helper
 -- updateNewLink cateogryId
 ---- updateCategory
