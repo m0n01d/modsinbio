@@ -126,10 +126,6 @@ changeRouteTo maybeRoute model =
             ( Settings { session = session }, Cmd.none )
 
         Just (Route.Profile username) ->
-            let
-                _ =
-                    Debug.log "username" username
-            in
             ( Profile session username, Cmd.none )
 
 

@@ -52,7 +52,7 @@ jsonResolver : Decoder a -> Http.Resolver Error a
 jsonResolver decoder =
     Http.stringResolver <|
         \response ->
-            case Debug.log "res" response of
+            case response of
                 Http.GoodStatus_ _ body ->
                     Decode.decodeString (Decode.field "data" decoder) body
                         |> Result.mapError resultErrorToChangeset
@@ -63,7 +63,7 @@ jsonResolver decoder =
 
 resultErrorToChangeset : Decode.Error -> Error
 resultErrorToChangeset err =
-    case Debug.log "uh " err of
+    case err of
         Decode.Field _ err_ ->
             case err_ of
                 Decode.Failure msg _ ->

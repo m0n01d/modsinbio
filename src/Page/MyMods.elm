@@ -19,17 +19,15 @@ import Task
 import Url
 
 
--- roles
-    -- driver
-    -- business
-    -- admin
-    -- public
 
+-- roles
+-- driver
+-- business
+-- admin
+-- public
 -- @TODO authentication
 -- setup auth0
-    -- default to influencer role
-
-
+-- default to influencer role
 -- DB TRIGGER add categories on signup
 -- @TODO SOFT delete links
 -- @todo SOFT delete categories
@@ -39,6 +37,8 @@ import Url
 -- @TODO create and store default Modcategories Dict and union
 -- db trigger?
 -- @TODO profile page template renders model
+-- store instagram id on User
+-- update user schema and relations and triggers
 
 
 type alias Model =
@@ -516,10 +516,6 @@ update msg model =
             )
 
         CategoryResponse x ->
-            let
-                _ =
-                    Debug.log "@TODO error handling" x
-            in
             ( model, Cmd.none )
 
         ToggleNewCategoryForm ->
@@ -802,7 +798,7 @@ update msg model =
             )
 
         DeleteLinkResponse categoryId _ ->
-            Debug.todo "handle response"
+            ( model, Cmd.none )
 
         ToggleLinkActive categoryId link ->
             let
