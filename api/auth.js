@@ -1,7 +1,10 @@
 const axios = require('axios');
 const qs = require('qs');
-module.exports = auth;
+const { User } = require('../db/schema');
 const { REDIRECT_URI, CLIENT_ID, CLIENT_SECRET } = process.env;
+
+module.exports = auth;
+
 function auth(req, res) {
   const { code } = req.query;
 
@@ -23,7 +26,6 @@ function auth(req, res) {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       method: 'POST',
     };
-    console.log({ data });
     axios(config)
       .then(response => {
         console.log(response.data);
@@ -31,8 +33,9 @@ function auth(req, res) {
 
         return getUser({ access_token, user_id });
       })
-      .then(username => {
-        res.send(username);
+      .then(loginUser)
+      .then(user => {
+        return res.status(200).json(user.getUser());
       })
       .catch(e => {
         console.error(e);
@@ -47,12 +50,46 @@ function getUser({ access_token, user_id }) {
       `https://graph.instagram.com/${user_id}?fields=id,username&access_token=${access_token}`
     )
     .then(({ data }) => {
-      const user = data.username;
-      return user;
+      const { username, id: instagram_id } = data;
+      return { username, instagram_id };
     });
 }
 
+function loginUser(instaUser) {
+  return new Promise((resolve, reject) => {
+    return queryUser(instaUser, (_, user) => {
+      if (!user) {
+        return createUser(instaUser, resolve);
+      }
+      return resolve(user);
+    });
+  });
+}
+
+// TODO error handling
+function queryUser({ username }, done) {
+  return User.query()
+    .where('username', username)
+    .first()
+    .then(function(user) {
+      if (!user) {
+        return done('Unknown user');
+      }
+      // if (!user.active) {
+      //   return done('User is inactive');
+      // }
+      return done(null, user);
+    });
+}
+
+function createUser({ username, instagram_id }, done) {
+  return User.query()
+    .insert({ username, instagram_id, bio: '' })
+    .then(done);
+}
 /*
+
+
 query username
 check db for username
   if found
@@ -60,5 +97,6 @@ check db for username
   if not found
     add
   
+  return userid and role
   
 */

@@ -1,8 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 DROP TRIGGER IF EXISTS trigger_categories_creation on "users";
 DROP FUNCTION IF EXISTS trigger_on_sign_up();
 CREATE FUNCTION trigger_on_sign_up()
   RETURNS trigger AS $BODY$
-DECLARE user_id INT;
+DECLARE user_id uuid;
 BEGIN
   user_id := New.id;
   INSERT INTO categories (name, "order", owner) VALUES
