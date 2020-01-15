@@ -10,7 +10,7 @@ import RemoteData exposing (WebData)
 
 
 type alias CategoryId =
-    Int
+    String
 
 
 type alias ModCategory =
@@ -36,7 +36,7 @@ type alias ModCategory =
 decodeModCategory =
     Decode.succeed ModCategory
         |> Decode.hardcoded True
-        |> Decode.required "id" Decode.int
+        |> Decode.required "id" Decode.string
         |> Decode.hardcoded False
         |> Decode.optional "links" (Decode.list Link.decode) []
         |> Decode.hardcoded ""

@@ -3,6 +3,7 @@ module Page.MyMods exposing (..)
 import Data.Category as Category exposing (CategoryId, ModCategory)
 import Data.Link as Link exposing (Link, MorePanel(..))
 import Data.Session exposing (Session)
+import Data.User as User exposing (User)
 import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attributes
@@ -452,7 +453,7 @@ update msg model =
                     Api.document Category.queryDocument []
             in
             ( model
-            , Api.query session document Nothing Category.decodeModCategories
+            , Api.query session (User.sessionToken session) document Nothing Category.decodeModCategories
                 |> Task.attempt Initialized
             )
 
@@ -479,7 +480,7 @@ update msg model =
                         |> Decode.requiredAt [ "insert_categories", "returning", "0" ] Category.decodeModCategory
             in
             ( model
-            , Api.query session (Api.document Category.insert []) (Just encodedVars) decoder
+            , Api.query session (User.sessionToken session) (Api.document Category.insert []) (Just encodedVars) decoder
                 |> Task.attempt CategoryResponse
             )
 
@@ -489,7 +490,7 @@ update msg model =
                     let
                         encodedVars =
                             Encode.object
-                                [ ( "id", Encode.int categoryId )
+                                [ ( "id", Encode.string categoryId )
                                 , ( "name", Encode.string newName )
                                 ]
 
@@ -499,7 +500,7 @@ update msg model =
                                     (Decode.index 0 Category.decodeModCategory)
                     in
                     ( model
-                    , Api.query session (Api.document Category.update []) (Just encodedVars) decoder
+                    , Api.query session (User.sessionToken session) (Api.document Category.update []) (Just encodedVars) decoder
                         |> Task.attempt CategoryResponse
                     )
 
@@ -739,7 +740,7 @@ update msg model =
                                         Decode.succeed identity
                                             |> Decode.requiredAt [ "insert_links", "returning" ] (Decode.index 0 Link.decode)
                                 in
-                                Api.query session (Api.document Link.insert []) (Just encodedVars) decoder
+                                Api.query session (User.sessionToken session) (Api.document Link.insert []) (Just encodedVars) decoder
                                     |> Task.attempt (AddLinkResponse categoryId)
 
                             Nothing ->
@@ -777,11 +778,11 @@ update msg model =
 
                 decoder =
                     Decode.succeed identity
-                        |> Decode.requiredAt [ "delete_links", "returning" ]
+                        |> Decode.requiredAt [ "update_links", "returning" ]
                             (Decode.index 0 (Decode.value |> Decode.map (always link.id)))
             in
             ( model
-            , Api.query session (Api.document Link.deleteLink []) encodedVars decoder
+            , Api.query session (User.sessionToken session) (Api.document Link.deleteLink []) encodedVars decoder
                 |> Task.attempt (DeleteLinkResponse categoryId)
             )
 
@@ -815,7 +816,7 @@ update msg model =
                             (Decode.index 0 Link.decode)
             in
             ( model
-            , Api.query session (Api.document Link.updateIsActive []) encodedVars decoder
+            , Api.query session (User.sessionToken session) (Api.document Link.updateIsActive []) encodedVars decoder
                 |> Task.attempt (ToggleLinkActiveResponse categoryId)
             )
 

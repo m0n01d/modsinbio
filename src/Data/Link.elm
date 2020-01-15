@@ -74,7 +74,7 @@ encode { urlString, description, title, category_id, fragment, host, path, proto
         [ ( "urlString", Encode.string urlString )
         , ( "description", Encode.string description )
         , ( "title", Encode.string title )
-        , ( "category_id", Encode.int category_id )
+        , ( "category_id", Encode.string category_id )
         , ( "fragment", Encode.maybe Encode.string fragment )
         , ( "host", Encode.string host )
         , ( "path", Encode.string path )
@@ -123,7 +123,7 @@ deleteLink =
     """
 mutation DeleteLInk($id: Int) {
   __typename
-  delete_links(where: {id: {_eq: $id}}) {
+  update_links(_set:{soft_delete: true} where: {id: {_eq: $id}}) {
     returning {
       id
     }
