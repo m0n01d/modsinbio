@@ -3,13 +3,18 @@ module Main exposing (..)
 import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Data.Session as Session
+import Data.User as User
 import Html exposing (Html, div, h1, img, text)
 import Html.Attributes as Attributes exposing (src)
+import Json.Decode as Decode
+import Json.Decode.Extra as Decode
+import Network.Api as Api
 import Page.Home as Home
 import Page.Login as Login
 import Page.MyMods as MyMods
 import Page.Settings as Settings
 import Route exposing (Route)
+import Task
 import Url
 
 
@@ -26,9 +31,18 @@ type Model
     | Redirect Session.Session
 
 
-init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init _ url key =
-    Redirect { key = key }
+type alias Flags =
+    Decode.Value
+
+
+decodeFlags str =
+    Decode.decodeValue User.decodeDriver str
+        |> Result.withDefault User.Public
+
+
+init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url key =
+    Redirect { key = key, user = decodeFlags flags }
         |> changeRouteTo (Route.fromUrl url)
 
 
@@ -41,6 +55,7 @@ type Msg
     | UrlChanged Url.Url
     | HomeMsg Home.Msg
     | MyModsMsg MyMods.Msg
+    | ReceivedAuth (Result Api.Error User.DriverProfile)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -70,6 +85,28 @@ update msg model =
 
         ( MyModsMsg _, _ ) ->
             ( model, Cmd.none )
+
+        ( ReceivedAuth (Ok user), _ ) ->
+            let
+                oldSession =
+                    toSession model
+
+                session =
+                    { oldSession | user = User.driverPartialToFull oldSession.user user }
+
+                model_ =
+                    Redirect session
+            in
+            ( model_
+            , Nav.replaceUrl session.key (Route.routeToString Route.Admin)
+              -- @TODO SAVE USER TO PORTS AND REDIRECT
+            )
+
+        ( ReceivedAuth _, _ ) ->
+            ( model
+            , Cmd.none
+              -- @TODO SAVE USER TO PORTS AND REDIRECT
+            )
 
 
 updateWith : (subModel -> Model) -> (subMsg -> Msg) -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
@@ -125,6 +162,19 @@ changeRouteTo maybeRoute model =
         Just Route.Settings ->
             ( Settings { session = session }, Cmd.none )
 
+        Just (Route.Authed payload) ->
+            case payload of
+                Just token ->
+                    let
+                        fetchUser =
+                            User.query session token
+                                |> Task.attempt ReceivedAuth
+                    in
+                    ( Redirect { session | user = User.DriverPartial token }, fetchUser )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         Just (Route.Profile username) ->
             ( Profile session username, Cmd.none )
 
@@ -176,7 +226,7 @@ viewContent model =
 ---- PROGRAM ----
 
 
-main : Program () Model Msg
+main : Program Flags Model Msg
 main =
     Browser.application
         { view = view

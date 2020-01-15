@@ -37,10 +37,10 @@ document operation fragments =
     Document operation (flatten fragments)
 
 
-query session doc maybeVariables decoder =
+query session token doc maybeVariables decoder =
     Http.task
         { method = "POST"
-        , headers = buildHeaders session
+        , headers = buildHeaders token
         , url = Builder.crossOrigin apiUrl [ "v1", "graphql" ] []
         , body = Http.jsonBody (buildBody doc maybeVariables)
         , resolver = jsonResolver decoder
@@ -52,9 +52,10 @@ jsonResolver : Decoder a -> Http.Resolver Error a
 jsonResolver decoder =
     Http.stringResolver <|
         \response ->
-            case response of
+            case Debug.log "res" response of
                 Http.GoodStatus_ _ body ->
                     Decode.decodeString (Decode.field "data" decoder) body
+                        |> Debug.log "f"
                         |> Result.mapError resultErrorToChangeset
 
                 _ ->
@@ -76,8 +77,16 @@ resultErrorToChangeset err =
             Error "Invalid request"
 
 
-buildHeaders s =
-    []
+buildHeaders : String -> List Http.Header
+
+
+
+--- TODO APITOKEN
+
+
+buildHeaders token =
+    [ Http.header "Authorization" ("Bearer " ++ token)
+    ]
 
 
 buildBody : Document -> Maybe Value -> Value
