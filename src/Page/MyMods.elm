@@ -89,8 +89,11 @@ view model =
                     , Html.ul
                         []
                         (model.mods
-                            |> Dict.foldr
-                                (\categoryId category acc ->
+                            |> Dict.toList
+                            |> List.map Tuple.second
+                            |> List.sortBy .order
+                            |> List.map
+                                (\category ->
                                     Html.li [ Attributes.class "mb-4" ]
                                         [ Html.div [ Attributes.class "flex items-center w-full px-1 py-1 " ]
                                             [ Html.p
@@ -155,9 +158,7 @@ view model =
                                                     |> List.map (viewLink category.id)
                                             )
                                         ]
-                                        :: acc
                                 )
-                                []
                         )
                     , Html.button
                         [ Attributes.class "px-4 py-1 font-medium text-center rounded-sm border my-3 "
@@ -467,22 +468,42 @@ update msg model =
             ( { model | newCategoryName = name }, Cmd.none )
 
         AddNewCategory ->
-            let
-                encodedVars =
-                    Encode.object
-                        [ ( "objects"
-                          , Encode.list Category.encode [ { name = model.newCategoryName, order = 8, owner = 1 } ]
-                          )
-                        ]
+            case session.user of
+                User.Driver token profile ->
+                    let
+                        order =
+                            1 + List.length (Dict.toList model.mods)
 
-                decoder =
-                    Decode.succeed identity
-                        |> Decode.requiredAt [ "insert_categories", "returning", "0" ] Category.decodeModCategory
-            in
-            ( model
-            , Api.query session (User.sessionToken session) (Api.document Category.insert []) (Just encodedVars) decoder
-                |> Task.attempt CategoryResponse
-            )
+                        encodedVars =
+                            -- todo move order and owner to backend
+                            Encode.object
+                                [ ( "objects"
+                                  , Encode.list Category.encode
+                                        [ { name = model.newCategoryName
+                                          , order = order
+                                          , owner = User.idToString profile.id
+                                          }
+                                        ]
+                                  )
+                                ]
+                                |> Just
+
+                        decoder =
+                            Decode.succeed identity
+                                |> Decode.requiredAt [ "insert_categories", "returning", "0" ]
+                                    Category.decodeModCategory
+                    in
+                    ( model
+                    , Api.query session
+                        token
+                        (Api.document Category.insert [])
+                        encodedVars
+                        decoder
+                        |> Task.attempt CategoryResponse
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
         UpdateCategoryName categoryId ->
             case Dict.get categoryId model.mods of
