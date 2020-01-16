@@ -35,7 +35,10 @@ function auth(req, res) {
       })
       .then(loginUser)
       .then(user => {
-        return res.status(200).json(user.getUser());
+        const tokenized = user.getJwt();
+        const url = 'https://modsinbio.now.sh';
+        return res.redirect(`${url}/app/authed?token=${tokenized}`);
+        // return res.status(200).json(user.getUser());
       })
       .catch(e => {
         console.error(e);
