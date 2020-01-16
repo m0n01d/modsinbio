@@ -36,8 +36,9 @@ function auth(req, res) {
       .then(loginUser)
       .then(user => {
         const tokenized = user.getJwt();
-        const url = 'https://modsinbio.now.sh';
-        return res.redirect(`${url}/app/authed?token=${tokenized}`);
+        const url = 'http://localhost:3000';
+        return redirect(res, `${url}/app/authed?token=${tokenized}`);
+
         // return res.status(200).json(user.getUser());
       })
       .catch(e => {
@@ -46,7 +47,12 @@ function auth(req, res) {
       });
   }
 }
-
+function redirect(res, url) {
+  res.writeHead(301, {
+    Location: url,
+  });
+  return res.end();
+}
 function getUser({ access_token, user_id }) {
   return axios
     .get(
