@@ -69,7 +69,7 @@ encode { name, order, owner } =
     Encode.object
         [ ( "name", Encode.string name )
         , ( "order", Encode.int order )
-        , ( "owner", Encode.int 1 )
+        , ( "owner", Encode.string owner )
         ]
 
 
@@ -80,9 +80,9 @@ encode { name, order, owner } =
 queryDocument =
     """
 query Categories {
-    categories{
-        name, order, id, links {
-            id, title, urlString, active
+    categories(order_by: {order: desc}){
+        name, order, id, links(where: {soft_delete: {_eq: false}}) {
+            id, title, urlString, active, soft_delete
         }
     }
 }
