@@ -2,6 +2,7 @@ module Data.User exposing (..)
 
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
+import Json.Encode as Encode exposing (Value)
 import Network.Api as Api
 
 
@@ -29,7 +30,7 @@ decodeDriverPartial =
 decodeDriver =
     Decode.succeed Driver
         |> Decode.requiredAt [ "payload", "token" ] Decode.string
-        |> Decode.required "payload" decodeDriverProfile
+        |> Decode.requiredAt [ "payload", "user" ] decodeDriverProfile
 
 
 decodeDriverProfile =
@@ -51,6 +52,10 @@ type UserId
     = UserId String
 
 
+idToString (UserId identifier) =
+    identifier
+
+
 type alias DriverProfile =
     { id : UserId
     , username : String
@@ -62,13 +67,29 @@ type alias AccessToken =
     String
 
 
-foo =
-    Decode.decodeString decodeDriver xxx
-        |> Debug.log "foo"
+
+-- encode
 
 
-xxx =
-    "{\"id\":\"fd1f55d0-b14f-4ccc-8821-4cbf5f0710a6\",\"username\":\"dwrxht\",\"roles\":[\"driver\",\"public\"],\"token\":\"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiZHdyeGh0IiwiaHR0cHM6Ly9oYXN1cmEuaW8vand0L2NsYWltcyI6eyJ4LWhhc3VyYS1hbGxvd2VkLXJvbGVzIjpbImRyaXZlciIsInB1YmxpYyJdLCJ4LWhhc3VyYS1kZWZhdWx0LXJvbGUiOiJkcml2ZXIiLCJ4LWhhc3VyYS11c2VyLWlkIjoiZmQxZjU1ZDAtYjE0Zi00Y2NjLTg4MjEtNGNiZjVmMDcxMGE2In0sImlhdCI6MTU3ODk4MDA3NSwiZXhwIjoxNTgxNTcyMDc1LCJzdWIiOiJmZDFmNTVkMC1iMTRmLTRjY2MtODgyMS00Y2JmNWYwNzEwYTYifQ.kx8z4viCchRbSmweCLChEsw16WroITLELJpmgBPoKC2iKtvnSfUAwD6Wkp0B9arkEaHFn4htxErd8ZAtbLba9zAydCOQbq3bZjjtoAhjf_rUYFaxXXy9cYiK8aoe4xi6VdzIPZk64SYBJkNIeSY-wMd4rILqZImasqQQi6qxNvHbpUBrob6w5f_Uf6xZn-SYOS35VXyxZEJ_qrdIbYWceNM4Ak6ugYPj7KQstb5HYgmL1J2nrmnCEF9Ya3Ol6-ugRx1AtDaBiiW63jmws_7D3ViDOzaWxdWPVDU1vcGq94yrQd6rAftg11e97Hc-YxWeNt80-1CzxX_YWbZF-do-1w\"}"
+encodeDriverProfile : DriverProfile -> Value
+encodeDriverProfile { id, username, bio } =
+    Encode.object
+        [ ( "id", Encode.string <| idToString id )
+        , ( "username", Encode.string username )
+        , ( "bio", Encode.string bio )
+        ]
+
+
+encodeDriver : String -> DriverProfile -> Value
+encodeDriver token driverProfile =
+    Encode.object
+        [ ( "token", Encode.string token )
+        , ( "user", encodeDriverProfile driverProfile )
+        ]
+
+
+
+-- graphql
 
 
 fetchUser =

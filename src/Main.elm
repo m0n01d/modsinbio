@@ -9,6 +9,7 @@ import Html.Attributes as Attributes exposing (src)
 import Json.Decode as Decode
 import Json.Decode.Extra as Decode
 import Network.Api as Api
+import Page.Authed as Authed
 import Page.Home as Home
 import Page.Login as Login
 import Page.MyMods as MyMods
@@ -29,6 +30,7 @@ type Model
     | Profile Session.Session String
     | Settings Settings.Model
     | Redirect Session.Session
+    | Authed Authed.Model
 
 
 type alias Flags =
@@ -55,7 +57,7 @@ type Msg
     | UrlChanged Url.Url
     | HomeMsg Home.Msg
     | MyModsMsg MyMods.Msg
-    | ReceivedAuth (Result Api.Error User.DriverProfile)
+    | AuthedMsg Authed.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -86,27 +88,12 @@ update msg model =
         ( MyModsMsg _, _ ) ->
             ( model, Cmd.none )
 
-        ( ReceivedAuth (Ok user), _ ) ->
-            let
-                oldSession =
-                    toSession model
+        ( AuthedMsg subMsg, Authed subModel ) ->
+            Authed.update subMsg subModel
+                |> updateWith Authed AuthedMsg
 
-                session =
-                    { oldSession | user = User.driverPartialToFull oldSession.user user }
-
-                model_ =
-                    Redirect session
-            in
-            ( model_
-            , Nav.replaceUrl session.key (Route.routeToString Route.Admin)
-              -- @TODO SAVE USER TO PORTS AND REDIRECT
-            )
-
-        ( ReceivedAuth _, _ ) ->
-            ( model
-            , Cmd.none
-              -- @TODO SAVE USER TO PORTS AND REDIRECT
-            )
+        ( AuthedMsg _, _ ) ->
+            ( model, Cmd.none )
 
 
 updateWith : (subModel -> Model) -> (subMsg -> Msg) -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
@@ -137,6 +124,9 @@ toSession model =
         Profile session _ ->
             session
 
+        Authed { session } ->
+            session
+
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
 changeRouteTo maybeRoute model =
@@ -144,39 +134,40 @@ changeRouteTo maybeRoute model =
         session =
             toSession model
     in
-    case maybeRoute of
-        Nothing ->
+    case ( maybeRoute, session.user ) of
+        ( Just (Route.Profile username), _ ) ->
+            ( Profile session username, Cmd.none )
+
+        ( Just Route.Home, _ ) ->
             ( Home { session = session }, Cmd.none )
 
-        Just Route.Home ->
+        ( Nothing, _ ) ->
             ( Home { session = session }, Cmd.none )
 
-        Just Route.Login ->
+        ( Just Route.Login, _ ) ->
             ( Login { session = session }, Cmd.none )
 
-        Just Route.Admin ->
+        ( Just (Route.Authed payload), _ ) ->
+            case payload of
+                Just token ->
+                    Authed.init session token
+                        |> Tuple.mapFirst Authed
+                        |> Tuple.mapSecond (Cmd.map AuthedMsg)
+
+                Nothing ->
+                    -- todo redirect home?
+                    ( model, Cmd.none )
+
+        ( _, User.Public ) ->
+            ( Home { session = session }, Nav.replaceUrl session.key (Route.routeToString Route.Home) )
+
+        ( Just Route.Settings, _ ) ->
+            ( Settings { session = session }, Cmd.none )
+
+        ( Just Route.Admin, _ ) ->
             MyMods.update MyMods.InitializeMyMods (MyMods.initialModel session)
                 |> Tuple.mapFirst MyMods
                 |> Tuple.mapSecond (Cmd.map MyModsMsg)
-
-        Just Route.Settings ->
-            ( Settings { session = session }, Cmd.none )
-
-        Just (Route.Authed payload) ->
-            case payload of
-                Just token ->
-                    let
-                        fetchUser =
-                            User.query session token
-                                |> Task.attempt ReceivedAuth
-                    in
-                    ( Redirect { session | user = User.DriverPartial token }, fetchUser )
-
-                Nothing ->
-                    ( model, Cmd.none )
-
-        Just (Route.Profile username) ->
-            ( Profile session username, Cmd.none )
 
 
 
