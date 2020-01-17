@@ -1,6 +1,6 @@
 module Page.MyMods exposing (..)
 
-import Data.Category as Category exposing (CategoryId, ModCategory)
+import Data.Category as Category exposing (Category, CategoryId)
 import Data.Link as Link exposing (Link, MorePanel(..))
 import Data.Session exposing (Session)
 import Data.User as User exposing (User)
@@ -14,6 +14,7 @@ import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Network.Api as Api
 import Network.Scraper as Scraper
+import Page.Profile as Profile
 import Process
 import RemoteData exposing (RemoteData(..), WebData)
 import Task
@@ -58,7 +59,7 @@ type alias NewLink =
 
 
 type alias Mods =
-    Dict CategoryId ModCategory
+    Dict CategoryId Category
 
 
 initialModel session =
@@ -71,6 +72,13 @@ initialModel session =
 
 view : Model -> Html Msg
 view model =
+    let
+        mods =
+            model.mods
+                |> Dict.toList
+                |> List.map Tuple.second
+                |> List.sortBy .order
+    in
     Html.div []
         [ Html.div [ Attributes.class "md:px-8 mb-2" ]
             [ Html.p []
@@ -88,10 +96,7 @@ view model =
                         ]
                     , Html.ul
                         []
-                        (model.mods
-                            |> Dict.toList
-                            |> List.map Tuple.second
-                            |> List.sortBy .order
+                        (mods
                             |> List.map
                                 (\category ->
                                     Html.li [ Attributes.class "mb-4" ]
@@ -187,12 +192,12 @@ view model =
                     ]
                 ]
             , Html.div [ Attributes.class "flex-1" ]
-                [ viewPreview model ]
+                [ Profile.view (List.filter (.links >> List.isEmpty >> not) mods) ]
             ]
         ]
 
 
-viewNewLinkForm : ModCategory -> Html Msg
+viewNewLinkForm : Category -> Html Msg
 viewNewLinkForm category =
     let
         categoryId =
@@ -335,85 +340,6 @@ viewMorePanel { onClickClose, link } panel =
             Html.text "analytic"
 
 
-viewPreview model =
-    let
-        categoryView =
-            Html.div [ Attributes.class "my-4" ]
-                [ Html.p [ Attributes.class "font-semibold text-sm" ]
-                    [ Html.text "Engine" ]
-                , Html.ul []
-                    [ viewPreviewLink
-                    , viewPreviewLink
-                    , viewPreviewLink
-                    ]
-                , Html.button [ Attributes.class "text-center block w-full text-gray-700" ]
-                    [ Html.text "+ View all" ]
-                ]
-    in
-    Html.div
-        [ Attributes.class "flex flex-col justify-center items-center bg-center bg-contain bg-no-repeat"
-
-        -- , Attributes.style "background-image" "url(/images/iphone.png)"
-        ]
-        [ Html.div
-            [ Attributes.style "width" "320px"
-            , Attributes.style "max-height" "529px"
-
-            -- , Attributes.style "transform" "scale(0.75)"
-            , Attributes.class " overflow-y-scroll border-2 border-black rounded"
-            ]
-            [ Html.div [ Attributes.class "bg-white" ]
-                [ Html.div [ Attributes.class "px-2" ]
-                    [ Html.div
-                        [ Attributes.style "background-image" <|
-                            String.concat
-                                [ "url("
-                                , "https://www.placecage.com/300/300"
-                                , ")"
-                                ]
-                        , Attributes.class "bg-contain bg-center bg-no-repeat w-20 h-20 mx-auto mt-8 rounded-sm"
-                        ]
-                        []
-                    , Html.h1 [ Attributes.class "text-center font-medium text-lg mt-2" ]
-                        [ Html.text "@dwrxht" ]
-                    , Html.p [] [ Html.text "2018 wrx premium" ]
-                    , Html.p [] [ Html.text "bio?" ]
-                    , categoryView
-                    , categoryView
-                    , categoryView
-                    ]
-                ]
-            ]
-        ]
-
-
-viewPreviewLink =
-    Html.li []
-        [ Html.div [ Attributes.class "my-3 px-1" ]
-            [ Html.div []
-                [ Html.a
-                    [ Attributes.class "group text-sm md:text-base leading-tight text-center px-2 py-3 border border-green-600 mt-2 block rounded-sm bg-green-500 text-white hover:bg-white hover:text-green-500"
-                    , Attributes.href "https://www.fastwrx.com/collections/shift-knobs/products/cobb-6-speed-shift-knob"
-                    ]
-                    [ Html.text "COBB 6-Speed Shift Knob | FastWRX.com" ]
-                , Html.p
-                    [ Attributes.class "truncate text-xs text-gray-600 px-px py-1 hidden" --hidden for now
-                    ]
-                    [ Html.text "https://www.fastwrx.com/collections/shift-knobs/products/cobb-6-speed-shift-knob" ]
-                ]
-            , Html.button [ Attributes.class "block bg-gray-300 text-gray-800 w-full text-lg font-bold monospace mt-px" ]
-                [ Html.text "···"
-                ]
-            , Html.div
-                [ Attributes.class "border mt-0 px-1 py-2 text-sm text-gray-900"
-                , Attributes.classList [ ( "hidden", True ) ]
-                ]
-                [ Html.text "Here I am adding a comment or whatever. Shoutout to my boy @overlandwrx for the hook up on these sick parts"
-                ]
-            ]
-        ]
-
-
 type Msg
     = InitializeMyMods
     | Initialized (Result Api.Error Mods)
@@ -432,7 +358,7 @@ type Msg
     | UpdateCategoryName CategoryId
     | ToggleNewCategoryForm
     | AddNewCategory
-    | CategoryResponse (Result Api.Error ModCategory)
+    | CategoryResponse (Result Api.Error Category)
     | SetNewCategoryName String
     | DeleteLink CategoryId Link
     | DeleteLinkResponse CategoryId (Result Api.Error Link.Id)
@@ -491,7 +417,7 @@ update msg model =
                         decoder =
                             Decode.succeed identity
                                 |> Decode.requiredAt [ "insert_categories", "returning", "0" ]
-                                    Category.decodeModCategory
+                                    Category.decodeCategory
                     in
                     ( model
                     , Api.query session
@@ -518,7 +444,7 @@ update msg model =
                         decoder =
                             Decode.succeed identity
                                 |> Decode.requiredAt [ "update_categories", "returning" ]
-                                    (Decode.index 0 Category.decodeModCategory)
+                                    (Decode.index 0 Category.decodeCategory)
                     in
                     ( model
                     , Api.query session (User.sessionToken session) (Api.document Category.update []) (Just encodedVars) decoder

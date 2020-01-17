@@ -13,7 +13,7 @@ type alias CategoryId =
     String
 
 
-type alias ModCategory =
+type alias Category =
     { formIsHidden : Bool
     , id : CategoryId
     , isEditingCategoryTitle : Bool
@@ -33,8 +33,8 @@ type alias ModCategory =
 -- decode
 
 
-decodeModCategory =
-    Decode.succeed ModCategory
+decodeCategory =
+    Decode.succeed Category
         |> Decode.hardcoded True
         |> Decode.required "id" Decode.string
         |> Decode.hardcoded False
@@ -50,7 +50,7 @@ decodeModCategory =
 
 
 decodeModCategories =
-    Decode.field "categories" (Decode.list decodeModCategory)
+    Decode.field "categories" (Decode.list decodeCategory)
         |> Decode.andThen
             (\categories ->
                 categories
