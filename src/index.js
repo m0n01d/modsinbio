@@ -1,5 +1,7 @@
 import './main.css';
 import { Elm } from './Main.elm';
+
+require('./Elements/Openable')();
 // import * as serviceWorker from './serviceWorker';
 
 const flags = {

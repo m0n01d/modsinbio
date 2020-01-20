@@ -73,6 +73,9 @@ initialModel session =
 view : Model -> Html Msg
 view model =
     let
+        session =
+            model.session
+
         mods =
             model.mods
                 |> Dict.toList
@@ -88,7 +91,7 @@ view model =
                 ]
             ]
         , Html.div [ Attributes.class "flex md:flex-row flex-col" ]
-            [ Html.div [ Attributes.class "flex-1" ]
+            [ Html.div [ Attributes.class "flex-1", Attributes.style "max-width" "50%" ]
                 [ Html.div [ Attributes.class "mt-4 md:px-8 pb-8" ]
                     [ Html.div []
                         [ Html.p [ Attributes.class "capitalize text-center" ]
@@ -191,8 +194,14 @@ view model =
                             ]
                     ]
                 ]
-            , Html.div [ Attributes.class "flex-1" ]
-                [ Profile.view (List.filter (.links >> List.isEmpty >> not) mods) ]
+            , Html.div [ Attributes.class "flex-1", Attributes.style "max-height" "529px" ]
+                [ case session.user of
+                    User.Driver _ profile ->
+                        Profile.view (List.filter (.links >> List.isEmpty >> not) mods) profile
+
+                    _ ->
+                        Html.text ""
+                ]
             ]
         ]
 
