@@ -82,7 +82,7 @@ queryDocument =
 query Categories {
     categories(order_by: {order: desc}){
         name, order, id, links(where: {soft_delete: {_eq: false}}) {
-            id, title, urlString, active, soft_delete
+            id, title, urlString, active, soft_delete, description
         }
     }
 }
