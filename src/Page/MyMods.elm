@@ -194,7 +194,7 @@ view model =
                             ]
                     ]
                 ]
-            , Html.div [ Attributes.class "flex-1", Attributes.style "max-height" "529px" ]
+            , Html.div [ Attributes.class "flex-1" ]
                 [ case session.user of
                     User.Driver _ profile ->
                         Profile.view (List.filter (.links >> List.isEmpty >> not) mods) profile
