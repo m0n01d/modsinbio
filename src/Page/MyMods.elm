@@ -713,8 +713,11 @@ update msg model =
                             { category
                                 | links = newLink :: category.links
                                 , formIsHidden = True
-
-                                -- todo reset new link form fields after refactor to model
+                                , newDescription = ""
+                                , newTitle = ""
+                                , newName = ""
+                                , suggestedTitle = NotAsked
+                                , newUrl = ""
                             }
                         )
                         model.mods
