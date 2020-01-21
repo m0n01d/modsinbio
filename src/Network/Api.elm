@@ -1,5 +1,6 @@
 module Network.Api exposing (..)
 
+import Data.User as User
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
@@ -37,24 +38,33 @@ document operation fragments =
     Document operation (flatten fragments)
 
 
-query session token doc maybeVariables decoder =
+queryTask headers body decoder =
     Http.task
         { method = "POST"
-        , headers = buildHeaders token
+        , headers = headers
         , url = Builder.crossOrigin apiUrl [ "v1", "graphql" ] []
-        , body = Http.jsonBody (buildBody doc maybeVariables)
+        , body = body
         , resolver = jsonResolver decoder
         , timeout = Nothing
         }
+
+
+authedQuery token doc maybeVariables =
+    queryTask (authHeaders token) (Http.jsonBody (buildBody doc maybeVariables))
+
+
+unauthedQuery doc maybeVariables =
+    queryTask unAuthedHeaders (Http.jsonBody (buildBody doc maybeVariables))
 
 
 jsonResolver : Decoder a -> Http.Resolver Error a
 jsonResolver decoder =
     Http.stringResolver <|
         \response ->
-            case response of
+            case Debug.log "res" response of
                 Http.GoodStatus_ _ body ->
                     Decode.decodeString (Decode.field "data" decoder) body
+                        |> Result.mapError (Debug.log "xx")
                         |> Result.mapError resultErrorToChangeset
 
                 _ ->
@@ -76,14 +86,17 @@ resultErrorToChangeset err =
             Error "Invalid request"
 
 
-buildHeaders : String -> List Http.Header
-
-
 
 --- TODO APITOKEN
 
 
-buildHeaders token =
+unAuthedHeaders =
+    [ Http.header "X-Hasura-Role" "public"
+    ]
+
+
+authHeaders : User.AccessToken -> List Http.Header
+authHeaders token =
     [ Http.header "Authorization" ("Bearer " ++ token)
     ]
 

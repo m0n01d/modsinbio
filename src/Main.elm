@@ -13,6 +13,7 @@ import Page.Authed as Authed
 import Page.Home as Home
 import Page.Login as Login
 import Page.MyMods as MyMods
+import Page.Profile as Profile
 import Page.Settings as Settings
 import Route exposing (Route)
 import Task
@@ -27,10 +28,10 @@ type Model
     = Home Home.Model
     | Login Login.Model
     | MyMods MyMods.Model
-    | Profile Session.Session String
     | Settings Settings.Model
     | Redirect Session.Session
     | Authed Authed.Model
+    | Profile Profile.Model
 
 
 type alias Flags =
@@ -58,6 +59,7 @@ type Msg
     | HomeMsg Home.Msg
     | MyModsMsg MyMods.Msg
     | AuthedMsg Authed.Msg
+    | ProfileMsg Profile.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -95,6 +97,13 @@ update msg model =
         ( AuthedMsg _, _ ) ->
             ( model, Cmd.none )
 
+        ( ProfileMsg subMsg, Profile subModel ) ->
+            Profile.update subMsg subModel
+                |> updateWith Profile ProfileMsg
+
+        ( ProfileMsg _, _ ) ->
+            ( model, Cmd.none )
+
 
 updateWith : (subModel -> Model) -> (subMsg -> Msg) -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
 updateWith toModel toMsg ( subModel, subCmd ) =
@@ -121,7 +130,7 @@ toSession model =
         Redirect session ->
             session
 
-        Profile session _ ->
+        Profile { session } ->
             session
 
         Authed { session } ->
@@ -136,7 +145,9 @@ changeRouteTo maybeRoute model =
     in
     case ( maybeRoute, session.user ) of
         ( Just (Route.Profile username), _ ) ->
-            ( Profile session username, Cmd.none )
+            Profile.init session username
+                |> Tuple.mapFirst Profile
+                |> Tuple.mapSecond (Cmd.map ProfileMsg)
 
         ( Just Route.Home, _ ) ->
             ( Home { session = session }, Cmd.none )
@@ -184,7 +195,7 @@ view model =
     , body =
         [ div [ Attributes.class "container mx-auto" ]
             [ navbar model
-            , Html.main_ [ Attributes.class "pt-12 px-2" ] [ content ]
+            , Html.main_ [ Attributes.class "md:pt-12 px-2" ] [ content ]
             ]
         ]
     }
@@ -207,6 +218,15 @@ viewContent model =
             , content =
                 MyMods.view subModel
                     |> Html.map MyModsMsg
+            }
+
+        Profile subModel ->
+            let
+                { title, content } =
+                    Profile.page subModel
+            in
+            { title = title
+            , content = Html.map ProfileMsg content
             }
 
         _ ->

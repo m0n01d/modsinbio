@@ -1,9 +1,10 @@
 module Data.User exposing (..)
 
+import Data.Category as Category exposing (Category, CategoryId)
+import Dict exposing (Dict)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
-import Network.Api as Api
 
 
 type User
@@ -67,7 +68,24 @@ type alias AccessToken =
     String
 
 
+type alias Mods =
+    Dict CategoryId Category
 
+
+type alias PublicProfile =
+    { profile : DriverProfile
+    , mods : Mods
+    }
+
+
+decodePublicProfile =
+    Decode.succeed PublicProfile
+        |> Decode.custom decodeDriverProfile
+        |> Decode.custom Category.decodeModCategories
+
+
+
+-- TODO ME DADDY
 -- encode
 
 
@@ -86,53 +104,3 @@ encodeDriver token driverProfile =
         [ ( "token", Encode.string token )
         , ( "user", encodeDriverProfile driverProfile )
         ]
-
-
-
--- graphql
-
-
-fetchUser =
-    """
-query FetchUser {
-  __typename
-  users {
-    username
-    id
-    bio
-    categories {
-      id
-      name
-      links {
-        id
-      }
-    }
-  }
-}
-
-"""
-
-
-document =
-    Api.document fetchUser []
-
-
-decoder_ =
-    Decode.succeed identity
-        |> Decode.required "users" (Decode.index 0 decodeDriverProfile)
-
-
-query session token =
-    Api.query session token document Nothing decoder_
-
-
-sessionToken { user } =
-    case user of
-        Public ->
-            ""
-
-        DriverPartial token ->
-            token
-
-        Driver token _ ->
-            token
