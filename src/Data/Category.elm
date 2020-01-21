@@ -105,7 +105,7 @@ mutation InsertCategory($objects: [categories_insert_input!]!) {
 
 update =
     """
-mutation UpdateCategory($id:Int!, $name:String!) {
+mutation UpdateCategory($id:uuid!, $name:String!) {
   __typename
   update_categories(where: {id: {_eq: $id}}, _set: {name: $name}) {
     returning {
