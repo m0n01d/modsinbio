@@ -14,6 +14,7 @@ import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Network.Api as Api
 import Network.Scraper as Scraper
+import Network.User as User
 import Page.Profile as Profile
 import Process
 import RemoteData exposing (RemoteData(..), WebData)
@@ -23,24 +24,14 @@ import Url
 
 
 -- roles
--- driver
--- business
--- admin
--- public
--- @TODO authentication
--- setup auth0
--- default to influencer role
--- DB TRIGGER add categories on signup
--- @TODO SOFT delete links
+--- driver
+--- business
+--- admin
+--- public
 -- @todo SOFT delete categories
 -- todo new link update helper
 -- updateNewLink cateogryId
 ---- updateCategory
--- @TODO create and store default Modcategories Dict and union
--- db trigger?
--- @TODO profile page template renders model
--- store instagram id on User
--- update user schema and relations and triggers
 
 
 type alias Model =
@@ -197,7 +188,14 @@ view model =
             , Html.div [ Attributes.class "flex-1" ]
                 [ case session.user of
                     User.Driver _ profile ->
-                        Profile.view (List.filter (.links >> List.isEmpty >> not) mods) profile
+                        Html.div
+                            [ Attributes.class "border-2 border-black px-1 mx-auto"
+                            , Attributes.style "width" "320px"
+                            , Attributes.style "height" "529px"
+                            ]
+                            [ Profile.view (List.filter (.links >> List.isEmpty >> not) mods) profile
+                                |> Html.map ProfileMsg
+                            ]
 
                     _ ->
                         Html.text ""
@@ -373,6 +371,7 @@ type Msg
     | DeleteLinkResponse CategoryId (Result Api.Error Link.Id)
     | ToggleLinkActive CategoryId Link
     | ToggleLinkActiveResponse CategoryId (Result Api.Error Link)
+    | ProfileMsg Profile.Msg
     | NoOp
 
 
@@ -389,7 +388,7 @@ update msg model =
                     Api.document Category.queryDocument []
             in
             ( model
-            , Api.query session (User.sessionToken session) document Nothing Category.decodeModCategories
+            , Api.authedQuery (User.sessionToken session) document Nothing Category.decodeModCategories
                 |> Task.attempt Initialized
             )
 
@@ -429,7 +428,7 @@ update msg model =
                                     Category.decodeCategory
                     in
                     ( model
-                    , Api.query session
+                    , Api.authedQuery
                         token
                         (Api.document Category.insert [])
                         encodedVars
@@ -456,7 +455,7 @@ update msg model =
                                     (Decode.index 0 Category.decodeCategory)
                     in
                     ( model
-                    , Api.query session (User.sessionToken session) (Api.document Category.update []) (Just encodedVars) decoder
+                    , Api.authedQuery (User.sessionToken session) (Api.document Category.update []) (Just encodedVars) decoder
                         |> Task.attempt CategoryResponse
                     )
 
@@ -696,7 +695,7 @@ update msg model =
                                         Decode.succeed identity
                                             |> Decode.requiredAt [ "insert_links", "returning" ] (Decode.index 0 Link.decode)
                                 in
-                                Api.query session (User.sessionToken session) (Api.document Link.insert []) (Just encodedVars) decoder
+                                Api.authedQuery (User.sessionToken session) (Api.document Link.insert []) (Just encodedVars) decoder
                                     |> Task.attempt (AddLinkResponse categoryId)
 
                             Nothing ->
@@ -741,7 +740,7 @@ update msg model =
                             (Decode.index 0 (Decode.value |> Decode.map (always link.id)))
             in
             ( model
-            , Api.query session (User.sessionToken session) (Api.document Link.deleteLink []) encodedVars decoder
+            , Api.authedQuery (User.sessionToken session) (Api.document Link.deleteLink []) encodedVars decoder
                 |> Task.attempt (DeleteLinkResponse categoryId)
             )
 
@@ -775,7 +774,7 @@ update msg model =
                             (Decode.index 0 Link.decode)
             in
             ( model
-            , Api.query session (User.sessionToken session) (Api.document Link.updateIsActive []) encodedVars decoder
+            , Api.authedQuery (User.sessionToken session) (Api.document Link.updateIsActive []) encodedVars decoder
                 |> Task.attempt (ToggleLinkActiveResponse categoryId)
             )
 
@@ -804,6 +803,13 @@ update msg model =
 
         ToggleLinkActiveResponse categoryId link ->
             -- todo error handling
+            ( model, Cmd.none )
+
+        ProfileMsg subMsg ->
+            let
+                _ =
+                    Debug.log "todo" subMsg
+            in
             ( model, Cmd.none )
 
         NoOp ->
