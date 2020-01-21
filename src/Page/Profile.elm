@@ -1,24 +1,47 @@
-module Page.Profile exposing (view)
+module Page.Profile exposing (Model, Msg(..), init, page, update, view)
 
 import Data.Category as Category exposing (Category)
+import Data.Link exposing (Link)
+import Data.Session as Session
 import Data.User as User exposing (DriverProfile)
+import Dict
 import Html exposing (Html)
 import Html.Attributes as Attributes
 import Html.Extra as Html
+import Network.Api as Api
+import Network.User as User
+import Task
 
 
+page : Model -> { title : String, content : Html Msg }
+page model =
+    case model.profile of
+        Just { profile, mods } ->
+            let
+                mods_ =
+                    Dict.toList mods
+                        |> List.map Tuple.second
+                        |> List.filter (.links >> List.isEmpty >> not)
+                        |> List.sortBy .order
+            in
+            { title = profile.username
+            , content = view mods_ profile
+            }
+
+        Nothing ->
+            { title = "err", content = Html.text "woop" }
+
+
+view : List Category -> DriverProfile -> Html Msg
 view mods profile =
     Html.div
-        [ Attributes.class "flex flex-col justify-center items-center bg-center bg-contain bg-no-repeat"
+        [ Attributes.class "max-h-full  overflow-y-scroll"
         ]
         [ Html.div
-            [ Attributes.style "width" "320px"
-            , Attributes.style "height" "529px"
-            , Attributes.style "transform" "scale(0.75)"
-            , Attributes.class " overflow-y-scroll border-2 border-black rounded max-w-full max-w-full"
+            [ Attributes.class "  rounded max-w-full max-w-full "
             ]
             [ Html.div [ Attributes.class "bg-white" ]
-                [ Html.div [ Attributes.class "px-2" ]
+                [ Html.div []
                     [ Html.div
                         [ Attributes.style "background-image" <|
                             String.concat
@@ -43,6 +66,7 @@ view mods profile =
         ]
 
 
+viewCategory : Category -> Html Msg
 viewCategory { name, links } =
     let
         firstChunk =
@@ -77,6 +101,7 @@ viewCategory { name, links } =
 -- custom element opanable
 
 
+viewPreviewLink : Link -> Html Msg
 viewPreviewLink { title, description } =
     Html.li []
         [ Html.div [ Attributes.class "my-3 px-1" ]
@@ -109,7 +134,44 @@ viewPreviewLink { title, description } =
                             "Openable__deactivator"
                             ""
                         ]
-                        [ Html.text "Close" ]
+                        [ Html.text "↑" ]
                     ]
             ]
         ]
+
+
+type Msg
+    = NoOp
+    | GotProfile (Result Api.Error User.PublicProfile)
+
+
+type alias Model =
+    { session : Session.Session
+    , profile : Maybe User.PublicProfile
+    }
+
+
+init : Session.Session -> String -> ( Model, Cmd Msg )
+init session username =
+    -- query for user
+    ( { session = session, profile = Nothing }
+    , User.profileDocument username
+        |> Task.attempt GotProfile
+    )
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        NoOp ->
+            ( model, Cmd.none )
+
+        GotProfile (Ok profile) ->
+            ( { model | profile = Just profile }, Cmd.none )
+
+        GotProfile (Err err) ->
+            let
+                _ =
+                    Debug.log "e" err
+            in
+            ( model, Cmd.none )
