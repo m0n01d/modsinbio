@@ -5,6 +5,7 @@ import Data.Session as Session
 import Data.User as User
 import Json.Encode as Encode exposing (Value)
 import Network.Api as Api
+import Network.User as User
 import Route
 import Task
 
