@@ -10,7 +10,7 @@ module.exports = function openable(app) {
       this.$activator = this.querySelector('[Openable__activator]');
       this.$deactivator = this.querySelector('[Openable__deactivator]');
 
-      const x = this.$deactivator.closest('ui-openable');
+      const x = this.$deactivator && this.$deactivator.closest('ui-openable');
       if (x != this) {
         this.$deactivator = null;
       }
