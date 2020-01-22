@@ -44,6 +44,13 @@ decodeModels =
 fetchModels { make, year, onComplete } =
     Http.get
         { url =
-            Url.Builder.crossOrigin apiUrl [ "getmodelsformakeyear", "make", make, "modelyear", year ] [ asJson ]
+            Url.Builder.crossOrigin apiUrl
+                [ "getmodelsformakeyear"
+                , "make"
+                , make
+                , "modelyear"
+                , year
+                ]
+                [ asJson ]
         , expect = Http.expectJson onComplete decodeModels
         }

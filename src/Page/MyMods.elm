@@ -916,10 +916,12 @@ update msg model =
             )
 
         FetchVehicleMakesResponse res ->
-            ( { model | vehicleMakes = res }, Cmd.none )
+        -- @TODO take in dev
+
+            ( { model | vehicleMakes = RemoteData.map (List.take 4000) res }, Cmd.none )
 
         VehicleMakeSelected make ->
-            ( model, Cmd.none )
+            ( { model | vehicleMake = make }, Cmd.none )
 
         FetchVehicleModels ->
             case model.vehicleYear of
