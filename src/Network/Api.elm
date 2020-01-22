@@ -61,10 +61,9 @@ jsonResolver : Decoder a -> Http.Resolver Error a
 jsonResolver decoder =
     Http.stringResolver <|
         \response ->
-            case Debug.log "res" response of
+            case response of
                 Http.GoodStatus_ _ body ->
                     Decode.decodeString (Decode.field "data" decoder) body
-                        |> Result.mapError (Debug.log "xx")
                         |> Result.mapError resultErrorToChangeset
 
                 _ ->
