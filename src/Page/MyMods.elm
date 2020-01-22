@@ -4,10 +4,12 @@ import Data.Category as Category exposing (Category, CategoryId)
 import Data.Link as Link exposing (Link, MorePanel(..))
 import Data.Session exposing (Session)
 import Data.User as User exposing (User)
+import Data.Vehicle as Vehicle
 import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes as Attributes
 import Html.Events as Events
+import Html.Extra as Html
 import Http
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
@@ -15,6 +17,7 @@ import Json.Encode as Encode
 import Network.Api as Api
 import Network.Scraper as Scraper
 import Network.User as User
+import Network.Vehicle as Vehicle
 import Page.Profile as Profile
 import Process
 import RemoteData exposing (RemoteData(..), WebData)
@@ -32,6 +35,12 @@ import Url
 -- todo new link update helper
 -- updateNewLink cateogryId
 ---- updateCategory
+-- todo profile stuff
+-- update bio
+-- update car make and model
+-- update avatar
+-- start analytics
+-- research linktrees analytics offerings
 
 
 type alias Model =
@@ -39,6 +48,10 @@ type alias Model =
     , mods : Mods
     , newCategoryName : String
     , session : Session
+    , vehicleMakes : WebData (List Vehicle.Make)
+    , vehicleModels : WebData (List Vehicle.Model)
+    , vehicleYear : Maybe String
+    , vehicleMake : String
     }
 
 
@@ -53,11 +66,16 @@ type alias Mods =
     Dict CategoryId Category
 
 
+initialModel : Session -> Model
 initialModel session =
     { session = session
     , mods = Dict.fromList []
     , isNewCategoryFormVisible = False
     , newCategoryName = ""
+    , vehicleMakes = RemoteData.NotAsked
+    , vehicleModels = RemoteData.NotAsked
+    , vehicleYear = Nothing
+    , vehicleMake = ""
     }
 
 
@@ -74,18 +92,12 @@ view model =
                 |> List.sortBy .order
     in
     Html.div []
-        [ Html.div [ Attributes.class "md:px-8 mb-2" ]
-            [ Html.p []
-                [ Html.text "My car:"
-                , Html.span [ Attributes.class "ml-1" ]
-                    [ Html.text "2018 Subaru WRX Premium" ]
-                ]
-            ]
-        , Html.div [ Attributes.class "flex md:flex-row flex-col" ]
-            [ Html.div [ Attributes.class "flex-1", Attributes.style "max-width" "50%" ]
+        [ Html.div [ Attributes.class "flex md:flex-row flex-col" ]
+            [ Html.div [ Attributes.class "flex-1 md:w-1/2" ]
                 [ Html.div [ Attributes.class "mt-4 md:px-8 pb-8" ]
-                    [ Html.div []
-                        [ Html.p [ Attributes.class "capitalize text-center" ]
+                    [ viewMyBio model
+                    , Html.div []
+                        [ Html.p [ Attributes.class "capitalize text-center font-semibold" ]
                             [ Html.text "my mods" ]
                         ]
                     , Html.ul
@@ -96,7 +108,7 @@ view model =
                                     Html.li [ Attributes.class "mb-4" ]
                                         [ Html.div [ Attributes.class "flex items-center w-full px-1 py-1 " ]
                                             [ Html.p
-                                                [ Attributes.class "font-semibold mr-auto"
+                                                [ Attributes.class "font-medium mr-auto"
                                                 , Attributes.classList [ ( "hidden", category.isEditingCategoryTitle ) ]
                                                 ]
                                                 [ Html.text category.name
@@ -110,7 +122,7 @@ view model =
                                                 [ Attributes.class " mr-auto"
                                                 , Attributes.classList
                                                     [ ( "hidden", not category.isEditingCategoryTitle )
-                                                    , ( "font-semibold block", True )
+                                                    , ( "font-medium block", True )
                                                     ]
                                                 , Events.onSubmit <| UpdateCategoryName category.id
                                                 ]
@@ -185,7 +197,7 @@ view model =
                             ]
                     ]
                 ]
-            , Html.div [ Attributes.class "flex-1" ]
+            , Html.div [ Attributes.class "flex-1 hidden sm:block" ]
                 [ case session.user of
                     User.Driver _ profile ->
                         Html.div
@@ -200,6 +212,86 @@ view model =
                     _ ->
                         Html.text ""
                 ]
+            ]
+        ]
+
+
+viewMyBio model =
+    Html.div [ Attributes.class "w-full md:w-1/x2 md:mb-8" ]
+        [ Html.p [ Attributes.class "font-semibold text-center" ]
+            [ Html.text "My car:"
+            ]
+        , Html.form []
+            [ Html.div [ Attributes.class "mb-1" ]
+                [ Html.label []
+                    [ Html.text "Avatar"
+                    , Html.div [] [ Html.text "Select image" ]
+                    ]
+                , Html.input [] []
+                ]
+            , Html.div [ Attributes.class "mb-1" ]
+                [ Html.label [ Attributes.class "mr-1" ] [ Html.text "Year" ]
+                , Html.input
+                    [ Attributes.class "border rounded-sm block w-full px-2 py-1"
+                    , Attributes.type_ "text"
+                    , Attributes.pattern "[0-9]*"
+                    , Attributes.attribute "inputmode" "numeric"
+                    , Attributes.placeholder "2018"
+                    , Events.onFocus FetchVehicleMakes
+                    , Events.onInput SetVehicleYear
+                    ]
+                    []
+                ]
+            , Html.div []
+                [ Html.label [ Attributes.class "mr-1" ] [ Html.text "Make" ]
+                , Html.input
+                    [ Attributes.class "border rounded-sm block w-full px-2 py-1"
+                    , Attributes.id "bio-car-make"
+                    , Attributes.list "bio-car-make--options"
+                    , Attributes.placeholder "Subaru"
+                    , Events.onInput VehicleMakeSelected
+                    ]
+                    []
+                , model.vehicleMakes
+                    |> RemoteData.map
+                        (\makes ->
+                            Html.datalist [ Attributes.id "bio-car-make--options" ]
+                                (List.map (\make -> Html.option [ Attributes.value make.name ] []) makes)
+                        )
+                    |> RemoteData.withDefault Html.nothing
+                ]
+            , Html.div []
+                [ Html.label [] [ Html.text "Model" ]
+                , Html.input
+                    [ Attributes.class "border rounded-sm block w-full px-2 py-1"
+                    , Attributes.id "bio-car-model"
+                    , Attributes.list "bio-car-model--options"
+                    , Attributes.placeholder "WRX"
+                    , Events.onFocus FetchVehicleModels
+                    ]
+                    []
+                , model.vehicleModels
+                    |> RemoteData.map
+                        (\models ->
+                            Html.datalist [ Attributes.id "bio-car-model--options" ]
+                                (List.map (\make -> Html.option [ Attributes.value make.name ] []) models)
+                        )
+                    |> RemoteData.withDefault Html.nothing
+                ]
+            , Html.div []
+                [ Html.label [] [ Html.text "Bio" ]
+                , Html.textarea
+                    [ Attributes.class "block w-full border rounded-sm px-2 py-1"
+                    , Attributes.placeholder "Premium trim"
+                    ]
+                    []
+                ]
+            ]
+        , Html.div [ Attributes.class "mt-2" ]
+            [ Html.button
+                [ Attributes.class "px-4 py-2 font-medium text-center rounded-sm border"
+                ]
+                [ Html.text "Save" ]
             ]
         ]
 
@@ -372,6 +464,12 @@ type Msg
     | ToggleLinkActive CategoryId Link
     | ToggleLinkActiveResponse CategoryId (Result Api.Error Link)
     | ProfileMsg Profile.Msg
+    | FetchVehicleMakes
+    | FetchVehicleMakesResponse (WebData (List Vehicle.Make))
+    | VehicleMakeSelected String
+    | SetVehicleYear String
+    | FetchVehicleModels
+    | FetchVehicleModelsResponse (WebData (List Vehicle.Model))
     | NoOp
 
 
@@ -806,11 +904,51 @@ update msg model =
             ( model, Cmd.none )
 
         ProfileMsg subMsg ->
-            let
-                _ =
-                    Debug.log "todo" subMsg
-            in
             ( model, Cmd.none )
+
+        FetchVehicleMakes ->
+            ( model
+            , if RemoteData.isNotAsked model.vehicleMakes then
+                Vehicle.fetchMakes (FetchVehicleMakesResponse << RemoteData.fromResult)
+
+              else
+                Cmd.none
+            )
+
+        FetchVehicleMakesResponse res ->
+            ( { model | vehicleMakes = res }, Cmd.none )
+
+        VehicleMakeSelected make ->
+            ( model, Cmd.none )
+
+        FetchVehicleModels ->
+            case model.vehicleYear of
+                Just year ->
+                    ( model
+                    , Vehicle.fetchModels
+                        { make = model.vehicleMake
+                        , year = year
+                        , onComplete = FetchVehicleModelsResponse << RemoteData.fromResult
+                        }
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        FetchVehicleModelsResponse res ->
+            ( { model | vehicleModels = res }, Cmd.none )
+
+        SetVehicleYear year ->
+            ( { model
+                | vehicleYear =
+                    if String.trim year /= "" then
+                        Just year
+
+                    else
+                        Nothing
+              }
+            , Cmd.none
+            )
 
         NoOp ->
             ( model, Cmd.none )
