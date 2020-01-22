@@ -170,8 +170,4 @@ update msg model =
             ( { model | profile = Just profile }, Cmd.none )
 
         GotProfile (Err err) ->
-            let
-                _ =
-                    Debug.log "e" err
-            in
             ( model, Cmd.none )
