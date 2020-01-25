@@ -1,7 +1,8 @@
-module Data.Session exposing (Session, navKey)
+port module Data.Session exposing (Session, navKey, saveUser)
 
 import Browser.Navigation as Nav
 import Data.User as User exposing (User)
+import Json.Encode as Encode exposing (Value)
 
 
 type alias Session =
@@ -13,3 +14,17 @@ type alias Session =
 navKey : Session -> Nav.Key
 navKey { key } =
     key
+
+
+port toJs : Value -> Cmd msg
+
+
+saveUser token driverProfile =
+    let
+        encodedUser =
+            User.encodeDriver token driverProfile
+
+        payload =
+            Encode.object [ ( "payload", encodedUser ), ( "tag", Encode.string "SAVE_USER" ) ]
+    in
+    toJs payload

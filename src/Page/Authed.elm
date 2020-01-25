@@ -1,4 +1,4 @@
-port module Page.Authed exposing (..)
+module Page.Authed exposing (..)
 
 import Browser.Navigation as Nav
 import Data.Session as Session
@@ -38,19 +38,13 @@ update msg model =
 
                 session =
                     { oldSession | user = User.driverPartialToFull oldSession.user driverProfile }
-
-                encodedUser =
-                    User.encodeDriver token driverProfile
-
-                payload =
-                    Encode.object [ ( "payload", encodedUser ), ( "tag", Encode.string "SAVE_USER" ) ]
             in
             ( { model | session = session }
             , Cmd.batch
                 [ --save to port
                   -- redirect
                   Nav.replaceUrl session.key (Route.routeToString Route.Admin)
-                , toJs payload
+                , Session.saveUser token driverProfile
                 ]
             )
 
@@ -60,6 +54,3 @@ update msg model =
             --         Debug.log "todo " err
             -- in
             ( model, Cmd.none )
-
-
-port toJs : Value -> Cmd msg
