@@ -49,16 +49,30 @@ view mods profile =
                         [ Attributes.style "background-image" <|
                             String.concat
                                 [ "url("
-                                , "https://www.placecage.com/300/300"
+                                , String.concat
+                                    [ "https://dev-mods-in-bio.s3.amazonaws.com/"
+                                    , User.idToString profile.id
+                                    ]
                                 , ")"
                                 ]
                         , Attributes.class "bg-contain bg-center bg-no-repeat w-20 h-20 mx-auto mt-8 rounded-sm"
                         ]
                         []
-                    , Html.h1 [ Attributes.class "text-center font-medium text-lg mt-2" ]
+                    , Html.h1 [ Attributes.class "text-center font-medium text-lg my-2" ]
                         [ Html.text <| String.concat [ "@", profile.username ] ]
-                    , Html.p [] [ Html.text "2018 wrx premium" ]
-                    , Html.p [] [ Html.text "bio?" ]
+                    , case profile.profile of
+                        Just { bio, vehicleMake, vehicleYear, vehicleModel } ->
+                            Html.div [ Attributes.class "px-2" ]
+                                [ Html.p []
+                                    [ Html.text <|
+                                        -- @todo add trim
+                                        String.join " " [ vehicleYear, vehicleMake, vehicleModel ]
+                                    ]
+                                , Html.p [] [ Html.text bio ]
+                                ]
+
+                        Nothing ->
+                            Html.nothing
                     , Html.ul []
                         (mods
                             |> List.map viewCategory
@@ -79,7 +93,7 @@ viewCategory { name, links } =
             List.drop 3 links
     in
     Html.div [ Attributes.class "my-4" ]
-        [ Html.p [ Attributes.class "font-semibold text-sm" ]
+        [ Html.p [ Attributes.class "font-semibold text-sm px-px" ]
             [ Html.text name ]
         , Html.ul []
             (firstChunk |> List.map viewPreviewLink)
@@ -100,12 +114,8 @@ viewCategory { name, links } =
         ]
 
 
-
--- custom element opanable
-
-
 viewPreviewLink : Link -> Html Msg
-viewPreviewLink { title, description, id } =
+viewPreviewLink { title, description, urlString, id } =
     Html.li []
         [ Html.div [ Attributes.class "my-3 px-1" ]
             [ Html.div []
@@ -115,7 +125,7 @@ viewPreviewLink { title, description, id } =
                     ]
                     [ Html.a
                         [ Attributes.class "group text-sm md:text-base leading-tight text-center px-2 py-3 border border-green-600 mt-2 block rounded-sm bg-green-500 text-white hover:bg-white hover:text-green-500"
-                        , Attributes.href "https://www.fastwrx.com/collections/shift-knobs/products/cobb-6-speed-shift-knob"
+                        , Attributes.href urlString
                         , Attributes.target "_blnk"
                         , Attributes.rel "noopener"
                         ]
