@@ -2,10 +2,12 @@ module Page.MyMods exposing (..)
 
 import Data.Category as Category exposing (Category, CategoryId)
 import Data.Link as Link exposing (Link, MorePanel(..))
-import Data.Session exposing (Session)
+import Data.Session as Session exposing (Session)
 import Data.User as User exposing (User)
 import Data.Vehicle as Vehicle
 import Dict exposing (Dict)
+import File
+import File.Select
 import Html exposing (Html)
 import Html.Attributes as Attributes
 import Html.Events as Events
@@ -16,6 +18,7 @@ import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode
 import Network.Api as Api
 import Network.Scraper as Scraper
+import Network.SignedUrl as SignedUrl
 import Network.User as User
 import Network.Vehicle as Vehicle
 import Page.Profile as Profile
@@ -41,6 +44,8 @@ import Url
 -- update avatar
 -- start analytics
 -- research linktrees analytics offerings
+-- todo custom element for public profiles's avatar
+--- on error load placeholder?
 
 
 type alias Model =
@@ -50,8 +55,9 @@ type alias Model =
     , session : Session
     , vehicleMakes : WebData (List Vehicle.Make)
     , vehicleModels : WebData (List Vehicle.Model)
-    , vehicleYear : Maybe String
-    , vehicleMake : String
+    , profile : User.Profile
+    , maybeNewAvatar : Maybe String
+    , maybeAvatarFile : Maybe File.File
     }
 
 
@@ -74,8 +80,14 @@ initialModel session =
     , newCategoryName = ""
     , vehicleMakes = RemoteData.NotAsked
     , vehicleModels = RemoteData.NotAsked
-    , vehicleYear = Nothing
-    , vehicleMake = ""
+    , profile =
+        { vehicleYear = ""
+        , vehicleMake = ""
+        , vehicleModel = ""
+        , bio = ""
+        }
+    , maybeNewAvatar = Nothing
+    , maybeAvatarFile = Nothing
     }
 
 
@@ -95,7 +107,12 @@ view model =
         [ Html.div [ Attributes.class "flex md:flex-row flex-col" ]
             [ Html.div [ Attributes.class "flex-1 md:w-1/2" ]
                 [ Html.div [ Attributes.class "mt-4 md:px-8 pb-8" ]
-                    [ viewMyBio model
+                    [ case session.user of
+                        User.Driver _ profile ->
+                            viewMyBio model profile
+
+                        _ ->
+                            Html.nothing
                     , Html.div []
                         [ Html.p [ Attributes.class "capitalize text-center font-semibold" ]
                             [ Html.text "my mods" ]
@@ -216,82 +233,129 @@ view model =
         ]
 
 
-viewMyBio model =
+
+-- viewMyBio : User.Profile -> Html Msg
+
+
+viewMyBio { profile, maybeNewAvatar } driverProfile =
     Html.div [ Attributes.class "w-full md:w-1/x2 md:mb-8" ]
         [ Html.p [ Attributes.class "font-semibold text-center" ]
             [ Html.text "My car:"
             ]
-        , Html.form []
-            [ Html.div [ Attributes.class "mb-1" ]
-                [ Html.label []
+        , Html.div [ Attributes.class "mb-2 flex items-center" ]
+            [ Html.div []
+                [ Html.label [ Attributes.class "block font-medium mb-1" ]
                     [ Html.text "Avatar"
-                    , Html.div [] [ Html.text "Select image" ]
                     ]
-                , Html.input [] []
+                , Html.button
+                    [ Attributes.class "ml-2 px-4 py-2 font-medium text-center rounded-sm border block w-32 mb-1"
+                    , Events.onClick AskForAvatarFile
+                    ]
+                    [ Html.text "Select image" ]
+                , Html.viewIf (maybeNewAvatar /= Nothing) <|
+                    Html.div [ Attributes.class "" ]
+                        [ Html.button
+                            [ Attributes.class "border-green-700 text-white bg-green-500 ml-2 px-4 py-2 font-medium text-center rounded-sm border block w-32 mb-1"
+                            , Events.onClick SaveNewAvatar
+                            ]
+                            [ Html.text "Save" ]
+                        , Html.button
+                            [ Attributes.class "border-red-700 text-red-500 ml-2 px-4 py-2 font-medium text-center rounded-sm border block w-32 mb-1"
+                            , Events.onClick RemoveNewAvatar
+                            ]
+                            [ Html.text "Cancel" ]
+                        ]
                 ]
-            , Html.div [ Attributes.class "mb-1" ]
-                [ Html.label [ Attributes.class "mr-1" ] [ Html.text "Year" ]
+            , case maybeNewAvatar of
+                Just avatar ->
+                    Html.img [ Attributes.class "w-32 mx-auto", Attributes.src avatar ] []
+
+                Nothing ->
+                    Html.img
+                        [ Attributes.class "w-32 mx-auto"
+                        , Attributes.src <|
+                            String.concat
+                                [ "https://dev-mods-in-bio.s3.amazonaws.com/"
+                                , User.idToString driverProfile.id
+                                ]
+                        ]
+                        []
+            ]
+        , Html.form [ Events.onSubmit SaveMyProfile ]
+            [ Html.div [ Attributes.class "mb-2" ]
+                [ Html.label [ Attributes.class "mr-1 block font-medium mb-1" ] [ Html.text "Year" ]
                 , Html.input
                     [ Attributes.class "border rounded-sm block w-full px-2 py-1"
                     , Attributes.type_ "text"
                     , Attributes.pattern "[0-9]*"
                     , Attributes.attribute "inputmode" "numeric"
                     , Attributes.placeholder "2018"
-                    , Events.onFocus FetchVehicleMakes
+
+                    -- , Events.onFocus FetchVehicleMakes
                     , Events.onInput SetVehicleYear
+                    , Attributes.value profile.vehicleYear
                     ]
                     []
                 ]
-            , Html.div []
-                [ Html.label [ Attributes.class "mr-1" ] [ Html.text "Make" ]
+            , Html.div [ Attributes.class "mb-2" ]
+                [ Html.label [ Attributes.class "mb-1 mr-1 block font-medium" ] [ Html.text "Make" ]
                 , Html.input
                     [ Attributes.class "border rounded-sm block w-full px-2 py-1"
                     , Attributes.id "bio-car-make"
                     , Attributes.list "bio-car-make--options"
                     , Attributes.placeholder "Subaru"
                     , Events.onInput VehicleMakeSelected
+                    , Attributes.value profile.vehicleMake
                     ]
                     []
-                , model.vehicleMakes
-                    |> RemoteData.map
-                        (\makes ->
-                            Html.datalist [ Attributes.id "bio-car-make--options" ]
-                                (List.map (\make -> Html.option [ Attributes.value make.name ] []) makes)
-                        )
-                    |> RemoteData.withDefault Html.nothing
+
+                -- , model.vehicleMakes
+                --     |> RemoteData.map
+                --         (\makes ->
+                --             Html.datalist [ Attributes.id "bio-car-make--options" ]
+                --                 (List.map (\make -> Html.option [ Attributes.value make.name ] []) makes)
+                --         )
+                --     |> RemoteData.withDefault Html.nothing
                 ]
-            , Html.div []
-                [ Html.label [] [ Html.text "Model" ]
+            , Html.div [ Attributes.class "mb-2" ]
+                [ Html.label [ Attributes.class "mb-1  block font-medium" ] [ Html.text "Model" ]
                 , Html.input
                     [ Attributes.class "border rounded-sm block w-full px-2 py-1"
                     , Attributes.id "bio-car-model"
                     , Attributes.list "bio-car-model--options"
                     , Attributes.placeholder "WRX"
-                    , Events.onFocus FetchVehicleModels
+                    , Events.onInput SetVehicleModel
+                    , Attributes.value profile.vehicleModel
+
+                    -- , Events.onFocus FetchVehicleModels
                     ]
                     []
-                , model.vehicleModels
-                    |> RemoteData.map
-                        (\models ->
-                            Html.datalist [ Attributes.id "bio-car-model--options" ]
-                                (List.map (\make -> Html.option [ Attributes.value make.name ] []) models)
-                        )
-                    |> RemoteData.withDefault Html.nothing
+
+                -- , model.vehicleModels
+                --     |> RemoteData.map
+                --         (\models ->
+                --             Html.datalist [ Attributes.id "bio-car-model--options" ]
+                --                 (List.map (\make -> Html.option [ Attributes.value make.name ] []) models)
+                --         )
+                --     |> RemoteData.withDefault Html.nothing
                 ]
-            , Html.div []
-                [ Html.label [] [ Html.text "Bio" ]
+            , Html.div [ Attributes.class "mb-2" ]
+                [ Html.label [ Attributes.class "mb-1 block font-medium" ] [ Html.text "Bio" ]
                 , Html.textarea
                     [ Attributes.class "block w-full border rounded-sm px-2 py-1"
                     , Attributes.placeholder "Premium trim"
+                    , Attributes.value profile.bio
+                    , Events.onInput SetBio
                     ]
                     []
                 ]
-            ]
-        , Html.div [ Attributes.class "mt-2" ]
-            [ Html.button
-                [ Attributes.class "px-4 py-2 font-medium text-center rounded-sm border"
+            , Html.div [ Attributes.class "" ]
+                [ Html.button
+                    [ Attributes.class "px-4 py-2 font-medium text-center rounded-sm border"
+                    , Attributes.type_ "submit"
+                    ]
+                    [ Html.text "Save" ]
                 ]
-                [ Html.text "Save" ]
             ]
         ]
 
@@ -468,8 +532,18 @@ type Msg
     | FetchVehicleMakesResponse (WebData (List Vehicle.Make))
     | VehicleMakeSelected String
     | SetVehicleYear String
+    | SetVehicleModel String
+    | SetBio String
     | FetchVehicleModels
     | FetchVehicleModelsResponse (WebData (List Vehicle.Model))
+    | SaveMyProfile
+    | SaveMyProfileResponse User.Profile (Result Api.Error ())
+    | AskForAvatarFile
+    | AvatarImageLoaded File.File
+    | AvatarImageBase64 (Result String String)
+    | RemoveNewAvatar
+    | SaveNewAvatar
+    | SaveNewAvatarResponse (Result Http.Error String)
     | NoOp
 
 
@@ -491,7 +565,16 @@ update msg model =
             )
 
         Initialized (Ok mods) ->
-            ( { model | mods = Dict.union mods model.mods }, Cmd.none )
+            case session.user of
+                User.Driver _ { profile } ->
+                    let
+                        p =
+                            profile |> Maybe.withDefault model.profile
+                    in
+                    ( { model | mods = Dict.union mods model.mods, profile = p }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         Initialized _ ->
             ( model, Cmd.none )
@@ -916,41 +999,153 @@ update msg model =
             )
 
         FetchVehicleMakesResponse res ->
-        -- @TODO take in dev
-
+            -- @TODO take in dev
             ( { model | vehicleMakes = RemoteData.map (List.take 4000) res }, Cmd.none )
 
         VehicleMakeSelected make ->
-            ( { model | vehicleMake = make }, Cmd.none )
+            let
+                profile =
+                    model.profile
+
+                p =
+                    { profile | vehicleMake = make }
+            in
+            ( { model | profile = p }, Cmd.none )
 
         FetchVehicleModels ->
-            case model.vehicleYear of
-                Just year ->
-                    ( model
-                    , Vehicle.fetchModels
-                        { make = model.vehicleMake
-                        , year = year
-                        , onComplete = FetchVehicleModelsResponse << RemoteData.fromResult
-                        }
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+            -- case model.vehicleYear of
+            --     Just year ->
+            --         ( model
+            --         , Vehicle.fetchModels
+            --             { make = model.vehicleMake
+            --             , year = year
+            --             , onComplete = FetchVehicleModelsResponse << RemoteData.fromResult
+            --             }
+            --         )
+            --     _ ->
+            ( model, Cmd.none )
 
         FetchVehicleModelsResponse res ->
             ( { model | vehicleModels = res }, Cmd.none )
 
         SetVehicleYear year ->
-            ( { model
-                | vehicleYear =
-                    if String.trim year /= "" then
-                        Just year
+            let
+                profile =
+                    model.profile
 
-                    else
-                        Nothing
+                p =
+                    { profile | vehicleYear = year }
+            in
+            ( { model
+                | profile = p
               }
             , Cmd.none
             )
+
+        SetVehicleModel vehicleModel ->
+            let
+                profile =
+                    model.profile
+
+                p =
+                    { profile | vehicleModel = vehicleModel }
+            in
+            ( { model | profile = p }, Cmd.none )
+
+        SetBio bio ->
+            let
+                profile =
+                    model.profile
+
+                p =
+                    { profile | bio = bio }
+            in
+            ( { model | profile = p }, Cmd.none )
+
+        SaveMyProfile ->
+            let
+                profile =
+                    model.profile
+                        |> Debug.log "saving"
+            in
+            ( model
+            , case session.user of
+                User.Driver token p ->
+                    User.updateUserMutation token p.id profile
+                        |> Task.attempt (SaveMyProfileResponse profile)
+
+                _ ->
+                    Cmd.none
+            )
+
+        SaveMyProfileResponse profile (Ok ()) ->
+            let
+                ( u, cmd ) =
+                    case session.user of
+                        User.Driver token p ->
+                            ( User.Driver token { p | profile = Just profile }
+                            , Session.saveUser token { p | profile = Just profile }
+                            )
+
+                        _ ->
+                            ( session.user, Cmd.none )
+
+                sess =
+                    { session | user = u }
+            in
+            ( { model | profile = profile, session = sess }, cmd )
+
+        SaveMyProfileResponse _ _ ->
+            ( model, Cmd.none )
+
+        AskForAvatarFile ->
+            ( model, File.Select.file [ "image/*" ] AvatarImageLoaded )
+
+        AvatarImageLoaded file ->
+            ( { model | maybeAvatarFile = Just file }
+            , File.toUrl file
+                |> Task.attempt AvatarImageBase64
+            )
+
+        AvatarImageBase64 (Ok str) ->
+            ( { model | maybeNewAvatar = Just str }, Cmd.none )
+
+        AvatarImageBase64 (Err str) ->
+            let
+                _ =
+                    Debug.log "why" str
+            in
+            ( model, Cmd.none )
+
+        RemoveNewAvatar ->
+            ( { model | maybeNewAvatar = Nothing, maybeAvatarFile = Nothing }, Cmd.none )
+
+        SaveNewAvatar ->
+            case ( session.user, model.maybeAvatarFile ) of
+                ( User.Driver token profile, Just file ) ->
+                    let
+                        mimeType =
+                            File.mime file
+                    in
+                    ( model
+                    , SignedUrl.getSignedUrl token profile.id mimeType
+                        |> Task.andThen
+                            (\url ->
+                                uploadFile token { url = url, file = file }
+                            )
+                        |> Task.attempt SaveNewAvatarResponse
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        SaveNewAvatarResponse (Ok _) ->
+            -- @todo cache bust --
+            update RemoveNewAvatar model
+
+        SaveNewAvatarResponse (Err _) ->
+            -- @todo
+            ( model, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -976,3 +1171,15 @@ viewIf bool html =
 
     else
         Html.text ""
+
+
+uploadFile token { url, file } =
+    -- todo tracking
+    Http.task
+        { method = "put"
+        , headers = [] --  (Api.authHeaders token)
+        , url = url
+        , body = Http.fileBody file
+        , resolver = Http.stringResolver SignedUrl.resolver
+        , timeout = Nothing
+        }
