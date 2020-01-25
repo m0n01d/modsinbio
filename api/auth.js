@@ -28,7 +28,6 @@ function auth(req, res) {
     };
     axios(config)
       .then(response => {
-        console.log(response.data);
         const { access_token, user_id } = response.data;
 
         return getUser({ access_token, user_id });
@@ -42,7 +41,6 @@ function auth(req, res) {
         // return res.status(200).json(user.getUser());
       })
       .catch(e => {
-        console.error(e);
         res.send(500);
       });
   }
