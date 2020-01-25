@@ -5,6 +5,7 @@ import Dict exposing (Dict)
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
+import Json.Encode.Extra as Encode
 
 
 type User
@@ -38,6 +39,15 @@ decodeDriverProfile =
     Decode.succeed DriverProfile
         |> Decode.required "id" (Decode.map UserId Decode.string)
         |> Decode.required "username" Decode.string
+        |> Decode.custom (Decode.field "profile" (Decode.nullable decodeProfileData))
+        |> Decode.optional "views" Decode.int 0
+
+
+decodeProfileData =
+    Decode.succeed Profile
+        |> Decode.optional "vehicleYear" Decode.string ""
+        |> Decode.optional "vehicleMake" Decode.string ""
+        |> Decode.optional "vehicleModel" Decode.string ""
         |> Decode.optional "bio" Decode.string ""
 
 
@@ -60,6 +70,15 @@ idToString (UserId identifier) =
 type alias DriverProfile =
     { id : UserId
     , username : String
+    , profile : Maybe Profile
+    , views : Int
+    }
+
+
+type alias Profile =
+    { vehicleYear : String
+    , vehicleMake : String
+    , vehicleModel : String
     , bio : String
     }
 
@@ -90,11 +109,20 @@ decodePublicProfile =
 
 
 encodeDriverProfile : DriverProfile -> Value
-encodeDriverProfile { id, username, bio } =
+encodeDriverProfile { id, username, profile } =
     Encode.object
         [ ( "id", Encode.string <| idToString id )
         , ( "username", Encode.string username )
-        , ( "bio", Encode.string bio )
+        , ( "profile", Encode.maybe encodeProfile profile )
+        ]
+
+
+encodeProfile { bio, vehicleMake, vehicleModel, vehicleYear } =
+    Encode.object
+        [ ( "bio", Encode.string bio )
+        , ( "vehicleMake", Encode.string vehicleMake )
+        , ( "vehicleModel", Encode.string vehicleModel )
+        , ( "vehicleYear", Encode.string vehicleYear )
         ]
 
 
