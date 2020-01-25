@@ -12,6 +12,7 @@ import Html.Extra as Html
 import Http
 import Json.Decode as Decode
 import Network.Api as Api
+import Network.Link as Link
 import Network.User as User
 import Task
 
@@ -32,6 +33,7 @@ page model =
             }
 
         Nothing ->
+            -- @TODO error handling
             { title = "err", content = Html.text "woop" }
 
 
@@ -164,6 +166,7 @@ type Msg
     = NoOp
     | GotProfile (Result Api.Error User.PublicProfile)
     | LinkClicked Link.Id
+    | LinkClickedResponse (Result Api.Error ())
     | IncrementedView (Result Http.Error ())
 
 
@@ -175,7 +178,6 @@ type alias Model =
 
 init : Session.Session -> String -> ( Model, Cmd Msg )
 init session username =
-    -- query for user
     ( { session = session, profile = Nothing }
     , User.profileQuery username
         |> Task.attempt GotProfile
@@ -190,7 +192,6 @@ update msg model =
 
         GotProfile (Ok profile) ->
             ( { model | profile = Just profile }
-              -- analytics increment view
             , User.incrementViewCount profile.profile IncrementedView
             )
 
@@ -198,15 +199,15 @@ update msg model =
             ( model, Cmd.none )
 
         LinkClicked id ->
-            let
-                _ =
-                    Debug.log "click" id
-            in
+            ( model
+            , Link.clickedMutation id
+                |> Task.attempt LinkClickedResponse
+            )
+
+        LinkClickedResponse res ->
+            -- @todo error handling
             ( model, Cmd.none )
 
         IncrementedView res ->
-            let
-                _ =
-                    Debug.log "res" res
-            in
+            -- @todo error handling
             ( model, Cmd.none )
