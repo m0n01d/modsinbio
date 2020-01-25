@@ -8,7 +8,7 @@ import Url
 
 
 type Id
-    = Id Int
+    = Id String
 
 
 id (Id identifier) =
@@ -41,7 +41,7 @@ decodeToMaybeUrl =
 
 
 decodeId =
-    Decode.int
+    Decode.string
         |> Decode.map Id
 
 
@@ -84,7 +84,7 @@ encode { urlString, description, title, category_id, fragment, host, path, proto
 
 
 encodeId (Id identifier) =
-    Encode.int identifier
+    Encode.string identifier
 
 
 

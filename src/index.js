@@ -2,6 +2,7 @@ import './main.css';
 import { Elm } from './Main.elm';
 
 require('./Elements/Openable')();
+require('./Elements/LinkClick')();
 // import * as serviceWorker from './serviceWorker';
 
 const flags = {
