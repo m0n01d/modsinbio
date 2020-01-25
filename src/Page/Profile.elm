@@ -1,13 +1,16 @@
 module Page.Profile exposing (Model, Msg(..), init, page, update, view)
 
 import Data.Category as Category exposing (Category)
-import Data.Link exposing (Link)
+import Data.Link as Link exposing (Link)
 import Data.Session as Session
 import Data.User as User exposing (DriverProfile)
 import Dict
 import Html exposing (Html)
 import Html.Attributes as Attributes
+import Html.Events as Events
 import Html.Extra as Html
+import Http
+import Json.Decode as Decode
 import Network.Api as Api
 import Network.User as User
 import Task
@@ -102,15 +105,22 @@ viewCategory { name, links } =
 
 
 viewPreviewLink : Link -> Html Msg
-viewPreviewLink { title, description } =
+viewPreviewLink { title, description, id } =
     Html.li []
         [ Html.div [ Attributes.class "my-3 px-1" ]
             [ Html.div []
-                [ Html.a
-                    [ Attributes.class "group text-sm md:text-base leading-tight text-center px-2 py-3 border border-green-600 mt-2 block rounded-sm bg-green-500 text-white hover:bg-white hover:text-green-500"
-                    , Attributes.href "https://www.fastwrx.com/collections/shift-knobs/products/cobb-6-speed-shift-knob"
+                [ Html.node "ui-link-click"
+                    [ Decode.succeed (LinkClicked id)
+                        |> Events.on "LinkClicked"
                     ]
-                    [ Html.text title ]
+                    [ Html.a
+                        [ Attributes.class "group text-sm md:text-base leading-tight text-center px-2 py-3 border border-green-600 mt-2 block rounded-sm bg-green-500 text-white hover:bg-white hover:text-green-500"
+                        , Attributes.href "https://www.fastwrx.com/collections/shift-knobs/products/cobb-6-speed-shift-knob"
+                        , Attributes.target "_blnk"
+                        , Attributes.rel "noopener"
+                        ]
+                        [ Html.text title ]
+                    ]
                 ]
             , Html.viewIf (not (String.isEmpty description)) <|
                 Html.node "ui-openable"
@@ -143,6 +153,8 @@ viewPreviewLink { title, description } =
 type Msg
     = NoOp
     | GotProfile (Result Api.Error User.PublicProfile)
+    | LinkClicked Link.Id
+    | IncrementedView (Result Http.Error ())
 
 
 type alias Model =
@@ -155,7 +167,7 @@ init : Session.Session -> String -> ( Model, Cmd Msg )
 init session username =
     -- query for user
     ( { session = session, profile = Nothing }
-    , User.profileDocument username
+    , User.profileQuery username
         |> Task.attempt GotProfile
     )
 
@@ -167,7 +179,24 @@ update msg model =
             ( model, Cmd.none )
 
         GotProfile (Ok profile) ->
-            ( { model | profile = Just profile }, Cmd.none )
+            ( { model | profile = Just profile }
+              -- analytics increment view
+            , User.incrementViewCount profile.profile IncrementedView
+            )
 
         GotProfile (Err err) ->
+            ( model, Cmd.none )
+
+        LinkClicked id ->
+            let
+                _ =
+                    Debug.log "click" id
+            in
+            ( model, Cmd.none )
+
+        IncrementedView res ->
+            let
+                _ =
+                    Debug.log "res" res
+            in
             ( model, Cmd.none )

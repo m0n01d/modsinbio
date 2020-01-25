@@ -54,6 +54,7 @@ class User extends Model {
       username: this.username,
       roles: this.getRoles(),
       token: this.getJwt(),
+      views: this.views,
     };
   }
 
@@ -87,7 +88,8 @@ class User extends Model {
       required: ['username', 'instagram_id'],
       properties: {
         id: { type: 'uuid' },
-        username: { type: 'string', minLength: 1, maxLength: 255 },
+        username: { type: 'string' },
+        views: { type: 'integer' },
       },
     };
   }
