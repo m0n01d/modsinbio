@@ -218,11 +218,16 @@ view model =
                 [ case session.user of
                     User.Driver _ profile ->
                         Html.div
-                            [ Attributes.class "border-2 border-black px-1 mx-auto"
+                            [ Attributes.class "border-2 border-black px-1 mx-auto rounded-sm"
                             , Attributes.style "width" "320px"
                             , Attributes.style "height" "529px"
                             ]
-                            [ Profile.view (List.filter (.links >> List.isEmpty >> not) mods) profile
+                            [ Profile.view
+                                (List.filter
+                                    (.links >> List.isEmpty >> not)
+                                    mods
+                                )
+                                profile
                                 |> Html.map ProfileMsg
                             ]
 
