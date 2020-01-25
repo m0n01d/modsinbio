@@ -46,6 +46,7 @@ import Url
 -- research linktrees analytics offerings
 -- todo custom element for public profiles's avatar
 --- on error load placeholder?
+-- consider adding updated_at to bust cache
 
 
 type alias Model =
