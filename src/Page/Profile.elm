@@ -60,12 +60,19 @@ view mods profile =
                                 ]
                         ]
                         []
-                    , Html.div [ Attributes.class "px-1" ]
-                        [ Html.h1 [ Attributes.class "text-center font-medium text-lg my-2" ]
-                            [ Html.text <| String.concat [ "@", profile.username ] ]
+                    , Html.div [ Attributes.class "px-2" ]
+                        [ Html.h1 [ Attributes.class "text-left font-medium text-lg mt-2 mb-px" ]
+                            [ Html.a
+                                [ Attributes.href <| String.concat [ "https://instagram.com/", profile.username ]
+                                , Attributes.target "_blank"
+                                , Attributes.rel "noopener"
+                                ]
+                                [ Html.text <| String.concat [ "@", profile.username ]
+                                ]
+                            ]
                         , case profile.profile of
                             Just { bio, vehicleMake, vehicleYear, vehicleModel } ->
-                                Html.div [ Attributes.class "px-2" ]
+                                Html.div [ Attributes.class "px-" ]
                                     [ Html.p []
                                         [ Html.text <|
                                             -- @todo add trim
