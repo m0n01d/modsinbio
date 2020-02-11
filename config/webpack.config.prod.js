@@ -214,10 +214,19 @@ module.exports = {
           // module system.
           {
             loader: require.resolve('string-replace-loader'),
-            query: {
-              search: '%PUBLIC_URL%',
-              replace: publicUrl,
-              flags: 'g',
+            options: {
+              multiple: [
+                {
+                  search: '%PUBLIC_URL%',
+                  replace: publicUrl,
+                  flags: 'g',
+                },
+                {
+                  search: '%API_URL%',
+                  replace: env.raw.API_URL,
+                  flags: 'g',
+                },
+              ],
             },
           },
           {

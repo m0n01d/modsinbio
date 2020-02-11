@@ -1,7 +1,7 @@
 const cheerio = require('cheerio');
 const axios = require('axios');
 
-function scrapeTitle(req, res) {
+function scrape(req, res) {
   const url = req.query.url;
   if (!url || url.length < 1) return res.status(400).send('Url missing');
 
@@ -21,4 +21,4 @@ function scrapeTitle(req, res) {
     .catch(e => res.status(400).send(e));
 }
 
-module.exports = { scrapeTitle };
+module.exports = scrape;

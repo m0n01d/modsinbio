@@ -99,7 +99,7 @@ module.exports = function(proxy, allowedHost) {
       // https://github.com/facebook/create-react-app/issues/2272#issuecomment-302832432
       app.use(noopServiceWorkerMiddleware());
 
-      app.get('/api/scrape/title', require('../api/scraper').scrapeTitle);
+      app.get('/api/scrape/title', require('../api/scrape/title'));
       app.get('/api/signedUrl', require('../api/signedUrl'));
       app.get('/api/analytics-viewed', require('../api/analytics-viewed'));
     },
