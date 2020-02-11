@@ -2,6 +2,9 @@
   "env": {
     "CLIENT_ID": "@client_id",
     "CLIENT_SECRET": "@client_secret",
-    "REDIRECT_URI": "@redirect_uri"
+    "REDIRECT_URI": "@redirect_uri",
+    "AUTH_PRIVATE_KEY": "@mods-private-pem",
+    "AUTH_PUBLIC_KEY": "@mods-public-pem",
+    "DATABASE_URL": "@db-url"
   }
 }
