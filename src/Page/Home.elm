@@ -76,7 +76,7 @@ view model =
                         ]
                     , Html.div
                         [ Attributes.style "transform" "scale(0.75)"
-                        , Attributes.class "border-2 border-black px-1 mx-auto rounded-sm"
+                        , Attributes.class "border-2 border-black mx-auto rounded-sm"
                         , Attributes.style "width" "320px"
                         , Attributes.style "height" "529px"
                         ]

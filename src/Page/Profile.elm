@@ -48,7 +48,8 @@ view mods profile =
             [ Html.div [ Attributes.class "bg-white" ]
                 [ Html.div []
                     [ Html.div
-                        [ Attributes.style "background-image" <|
+                        [ Attributes.class "bg-center bg-cover block max-w-full mx-auto h-32"
+                        , Attributes.style "background-image" <|
                             String.concat
                                 [ "url("
                                 , String.concat
@@ -57,28 +58,29 @@ view mods profile =
                                     ]
                                 , ")"
                                 ]
-                        , Attributes.class "bg-contain bg-center bg-no-repeat w-20 h-20 mx-auto mt-8 rounded-sm"
                         ]
                         []
-                    , Html.h1 [ Attributes.class "text-center font-medium text-lg my-2" ]
-                        [ Html.text <| String.concat [ "@", profile.username ] ]
-                    , case profile.profile of
-                        Just { bio, vehicleMake, vehicleYear, vehicleModel } ->
-                            Html.div [ Attributes.class "px-2" ]
-                                [ Html.p []
-                                    [ Html.text <|
-                                        -- @todo add trim
-                                        String.join " " [ vehicleYear, vehicleMake, vehicleModel ]
+                    , Html.div [ Attributes.class "px-1" ]
+                        [ Html.h1 [ Attributes.class "text-center font-medium text-lg my-2" ]
+                            [ Html.text <| String.concat [ "@", profile.username ] ]
+                        , case profile.profile of
+                            Just { bio, vehicleMake, vehicleYear, vehicleModel } ->
+                                Html.div [ Attributes.class "px-2" ]
+                                    [ Html.p []
+                                        [ Html.text <|
+                                            -- @todo add trim
+                                            String.join " " [ vehicleYear, vehicleMake, vehicleModel ]
+                                        ]
+                                    , Html.p [] [ Html.text bio ]
                                     ]
-                                , Html.p [] [ Html.text bio ]
-                                ]
 
-                        Nothing ->
-                            Html.nothing
-                    , Html.ul []
-                        (mods
-                            |> List.map viewCategory
-                        )
+                            Nothing ->
+                                Html.nothing
+                        , Html.ul [ Attributes.class "" ]
+                            (mods
+                                |> List.map viewCategory
+                            )
+                        ]
                     ]
                 ]
             ]
@@ -95,7 +97,7 @@ viewCategory { name, links } =
             List.drop 3 links
     in
     Html.div [ Attributes.class "my-4" ]
-        [ Html.p [ Attributes.class "font-semibold text-sm px-px" ]
+        [ Html.p [ Attributes.class "font-semibold text-sm px-px sticky top-0 bg-white py-2" ]
             [ Html.text name ]
         , Html.ul []
             (firstChunk |> List.map viewPreviewLink)
