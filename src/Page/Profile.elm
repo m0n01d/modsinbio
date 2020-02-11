@@ -63,7 +63,8 @@ view mods profile =
                     , Html.div [ Attributes.class "px-2" ]
                         [ Html.h1 [ Attributes.class "text-left font-medium text-lg mt-2 mb-px" ]
                             [ Html.a
-                                [ Attributes.href <| String.concat [ "https://instagram.com/", profile.username ]
+                                [ Attributes.href <|
+                                    String.concat [ "https://instagram.com/", profile.username ]
                                 , Attributes.target "_blank"
                                 , Attributes.rel "noopener"
                                 ]
@@ -76,7 +77,11 @@ view mods profile =
                                     [ Html.p []
                                         [ Html.text <|
                                             -- @todo add trim
-                                            String.join " " [ vehicleYear, vehicleMake, vehicleModel ]
+                                            String.join " "
+                                                [ vehicleYear
+                                                , vehicleMake
+                                                , vehicleModel
+                                                ]
                                         ]
                                     , Html.p [] [ Html.text bio ]
                                     ]

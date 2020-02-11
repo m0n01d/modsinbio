@@ -53,10 +53,10 @@ view : Model -> Html Msg
 view model =
     Html.div []
         [ Html.div
-            [ Attributes.class "text-center mx-auto text-center min-h-screen flex flex-col justify-center"
+            [ Attributes.class "text-center mx-auto text-center md:min-h-screen  flex flex-col justify-center"
             ]
             [ Html.h1
-                [ Attributes.class "text-3xl  -mt-24 font-light"
+                [ Attributes.class "text-3xl mt-4  md:-mt-24 font-light"
                 ]
                 [ Html.text "Mods in Bio" ]
             , Html.p [ Attributes.class "text-xl mt-2 mb-3" ] [ Html.text "Share links to your car's mods with your followers and fans." ]
@@ -75,8 +75,8 @@ view model =
                     [ Html.text "Everyone wants to know where to find your favorite mods."
                     ]
                 ]
-            , Html.div [ Attributes.class "flex pt-8" ]
-                [ Html.div [ Attributes.class "flex-1 " ]
+            , Html.div [ Attributes.class "md:flex pt-8" ]
+                [ Html.div [ Attributes.class "flex-1 hidden md:block" ]
                     [ Html.div
                         [ Attributes.class "border-2 border-black mx-auto rounded-sm"
                         , Attributes.style "width" "320px"
@@ -100,7 +100,7 @@ view model =
                         ]
                     ]
                 , Html.div [ Attributes.class "flex-1" ]
-                    [ Html.h4 [ Attributes.class "text-lg" ] [ Html.text "How it works" ]
+                    [ Html.h4 [ Attributes.class "text-lg mb-2" ] [ Html.text "How it works" ]
                     , Html.p [] [ Html.text "Sign up now for free." ]
                     , Html.p [] [ Html.text "Add links to your car's mods." ]
                     , Html.p []
