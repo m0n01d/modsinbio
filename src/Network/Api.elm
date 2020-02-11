@@ -9,7 +9,7 @@ import Url.Builder as Builder
 
 
 apiUrl =
-    "http://localhost:8080"
+    "%API_URL%"
 
 
 type Fragment
@@ -64,7 +64,7 @@ jsonResolver decoder =
             case response of
                 Http.GoodStatus_ _ body ->
                     Decode.decodeString (Decode.field "data" decoder) body
-                        |> Debug.log "now what"
+                        -- |> Debug.log "now what"
                         |> Result.mapError resultErrorToChangeset
 
                 _ ->

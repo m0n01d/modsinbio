@@ -39,10 +39,6 @@ resolver response =
             Err (Http.BadStatus metadata.statusCode)
 
         Http.GoodStatus_ metadata body ->
-            let
-                _ =
-                    Debug.log "boddyy" body
-            in
             case Decode.decodeValue Decode.string (Encode.string body) of
                 Ok value ->
                     Ok value
