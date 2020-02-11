@@ -150,10 +150,12 @@ changeRouteTo maybeRoute model =
                 |> Tuple.mapSecond (Cmd.map ProfileMsg)
 
         ( Just Route.Home, _ ) ->
-            ( Home { session = session }, Cmd.none )
+            Home.init session "dwrxht"
+                |> Tuple.mapFirst Home
+                |> Tuple.mapSecond (Cmd.map HomeMsg)
 
         ( Nothing, _ ) ->
-            ( Home { session = session }, Cmd.none )
+            ( Home { session = session, profile = Nothing }, Cmd.none )
 
         ( Just Route.Login, _ ) ->
             ( Login { session = session }, Cmd.none )
@@ -170,7 +172,7 @@ changeRouteTo maybeRoute model =
                     ( model, Cmd.none )
 
         ( _, User.Public ) ->
-            ( Home { session = session }, Nav.replaceUrl session.key (Route.routeToString Route.Home) )
+            ( Home { session = session, profile = Nothing }, Nav.replaceUrl session.key (Route.routeToString Route.Home) )
 
         ( Just Route.Settings, _ ) ->
             ( Settings { session = session }, Cmd.none )
@@ -193,9 +195,9 @@ view model =
     in
     { title = title
     , body =
-        [ div [ Attributes.class "container mx-auto" ]
+        [ div [ Attributes.class "container mx-auto root flex flex-col" ]
             [ navbar model
-            , Html.main_ [ Attributes.class "md:pt-12 px-2" ] [ content ]
+            , Html.main_ [ Attributes.class "px-2 flex-1" ] [ content ]
             ]
         ]
     }
@@ -211,7 +213,11 @@ viewContent : Model -> { title : String, content : Html Msg }
 viewContent model =
     case model of
         Home m ->
-            { title = "Mods in Bio", content = Home.view }
+            { title = "Mods in Bio"
+            , content =
+                Home.view m
+                    |> Html.map HomeMsg
+            }
 
         MyMods subModel ->
             { title = " My Mods - Mods in Bio"
