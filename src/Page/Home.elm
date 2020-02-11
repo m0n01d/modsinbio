@@ -68,15 +68,17 @@ view model =
         , Html.div
             [ Attributes.class "md:w-4/5 mx-auto  px-4 pt-12 pb-8"
             ]
-            [ Html.h2 [ Attributes.class "text-2xl text-center mb-12" ] [ Html.text "Show off your upgrades." ]
-            , Html.div [ Attributes.class "flex" ]
+            [ Html.div [ Attributes.class "text-center mb-12" ]
+                [ Html.h2 [ Attributes.class "text-2xl" ]
+                    [ Html.text "Show off your upgrades." ]
+                , Html.p []
+                    [ Html.text "Everyone wants to know where to find your favorite mods."
+                    ]
+                ]
+            , Html.div [ Attributes.class "flex pt-8" ]
                 [ Html.div [ Attributes.class "flex-1 " ]
-                    [ Html.p []
-                        [ Html.text "Everyone wants to know where to find your favorite mods."
-                        ]
-                    , Html.div
-                        [ Attributes.style "transform" "scale(0.75)"
-                        , Attributes.class "border-2 border-black mx-auto rounded-sm"
+                    [ Html.div
+                        [ Attributes.class "border-2 border-black mx-auto rounded-sm"
                         , Attributes.style "width" "320px"
                         , Attributes.style "height" "529px"
                         ]
@@ -98,7 +100,7 @@ view model =
                         ]
                     ]
                 , Html.div [ Attributes.class "flex-1" ]
-                    [ Html.h4 [] [ Html.text "How it works" ]
+                    [ Html.h4 [ Attributes.class "text-lg" ] [ Html.text "How it works" ]
                     , Html.p [] [ Html.text "Sign up now for free." ]
                     , Html.p [] [ Html.text "Add links to your car's mods." ]
                     , Html.p []
