@@ -67,6 +67,10 @@ idToString (UserId identifier) =
     identifier
 
 
+stringToId userId =
+    UserId userId
+
+
 type alias DriverProfile =
     { id : UserId
     , username : String
