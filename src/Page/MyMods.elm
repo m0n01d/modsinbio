@@ -47,6 +47,9 @@ import Url
 -- todo custom element for public profiles's avatar
 --- on error load placeholder?
 -- consider adding updated_at to bust cache
+-- @todo cascading deletes
+-- double check permissions
+-- hosting
 
 
 type alias Model =
@@ -1072,7 +1075,6 @@ update msg model =
             let
                 profile =
                     model.profile
-                        |> Debug.log "saving"
             in
             ( model
             , case session.user of
@@ -1117,10 +1119,7 @@ update msg model =
             ( { model | maybeNewAvatar = Just str }, Cmd.none )
 
         AvatarImageBase64 (Err str) ->
-            let
-                _ =
-                    Debug.log "why" str
-            in
+            -- @todo
             ( model, Cmd.none )
 
         RemoveNewAvatar ->
