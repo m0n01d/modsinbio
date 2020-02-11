@@ -218,11 +218,11 @@ view model =
                             ]
                     ]
                 ]
-            , Html.div [ Attributes.class "flex-1 hidden sm:block" ]
+            , Html.div [ Attributes.class "flex-1 hidden sm:block pt-12" ]
                 [ case session.user of
                     User.Driver _ profile ->
                         Html.div
-                            [ Attributes.class "border-2 border-black px-1 mx-auto rounded-sm"
+                            [ Attributes.class "border-2 border-black mx-auto rounded-sm"
                             , Attributes.style "width" "320px"
                             , Attributes.style "height" "529px"
                             ]
