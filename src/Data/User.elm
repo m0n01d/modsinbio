@@ -38,7 +38,7 @@ decodeDriver =
 decodeDriverProfile =
     Decode.succeed DriverProfile
         |> Decode.required "id" (Decode.map UserId Decode.string)
-        |> Decode.required "username" Decode.string
+        |> Decode.optional "username" Decode.string ""
         |> Decode.custom (Decode.field "profile" (Decode.nullable decodeProfileData))
         |> Decode.optional "views" Decode.int 0
 
