@@ -1,0 +1,230 @@
+- args:
+    tables:
+    - array_relationships:
+      - name: links
+        using:
+          foreign_key_constraint_on:
+            column: category_id
+            table:
+              name: links
+              schema: public
+      insert_permissions:
+      - permission:
+          check:
+            owner:
+              _eq: X-Hasura-User-Id
+          columns:
+          - name
+          - order
+          - owner
+        role: driver
+      object_relationships:
+      - name: user
+        using:
+          foreign_key_constraint_on: owner
+      select_permissions:
+      - permission:
+          columns:
+          - soft_delete
+          - order
+          - name
+          - created_at
+          - id
+          - owner
+          filter:
+            owner:
+              _eq: X-Hasura-User-Id
+        role: driver
+      - permission:
+          columns:
+          - name
+          - id
+          - created_at
+          - order
+          - owner
+          - soft_delete
+          filter: {}
+        role: public
+      table:
+        name: categories
+        schema: public
+      update_permissions:
+      - permission:
+          columns:
+          - name
+          - order
+          - soft_delete
+          filter:
+            owner:
+              _eq: X-Hasura-User-Id
+        role: driver
+    - insert_permissions:
+      - permission:
+          check: {}
+          columns:
+          - link
+        role: public
+      object_relationships:
+      - name: linkByLink
+        using:
+          foreign_key_constraint_on: link
+      select_permissions:
+      - permission:
+          columns:
+          - created_at
+          - id
+          - link
+          filter:
+            linkByLink:
+              category:
+                owner:
+                  _eq: X-Hasura-User-Id
+        role: driver
+      table:
+        name: link_clicks
+        schema: public
+    - array_relationships:
+      - name: link_clicks
+        using:
+          foreign_key_constraint_on:
+            column: link
+            table:
+              name: link_clicks
+              schema: public
+      insert_permissions:
+      - permission:
+          check:
+            category:
+              owner:
+                _eq: X-Hasura-User-Id
+          columns:
+          - active
+          - category_id
+          - description
+          - fragment
+          - host
+          - path
+          - protocol
+          - query
+          - soft_delete
+          - title
+          - urlString
+        role: driver
+      object_relationships:
+      - name: category
+        using:
+          foreign_key_constraint_on: category_id
+      select_permissions:
+      - permission:
+          columns:
+          - active
+          - soft_delete
+          - description
+          - fragment
+          - host
+          - path
+          - protocol
+          - query
+          - title
+          - urlString
+          - created_at
+          - category_id
+          - id
+          filter:
+            category:
+              owner:
+                _eq: X-Hasura-User-Id
+        role: driver
+      - permission:
+          columns:
+          - active
+          - category_id
+          - description
+          - id
+          - soft_delete
+          - title
+          - urlString
+          filter: {}
+        role: public
+      table:
+        name: links
+        schema: public
+      update_permissions:
+      - permission:
+          columns:
+          - active
+          - soft_delete
+          filter:
+            category:
+              owner:
+                _eq: X-Hasura-User-Id
+        role: driver
+    - array_relationships:
+      - name: roles
+        using:
+          foreign_key_constraint_on:
+            column: role_id
+            table:
+              name: user_role
+              schema: public
+      table:
+        name: role
+        schema: public
+    - object_relationships:
+      - name: role
+        using:
+          foreign_key_constraint_on: role_id
+      - name: user
+        using:
+          foreign_key_constraint_on: user_id
+      table:
+        name: user_role
+        schema: public
+    - array_relationships:
+      - name: categories
+        using:
+          foreign_key_constraint_on:
+            column: owner
+            table:
+              name: categories
+              schema: public
+      - name: roles
+        using:
+          foreign_key_constraint_on:
+            column: user_id
+            table:
+              name: user_role
+              schema: public
+      select_permissions:
+      - permission:
+          columns:
+          - created
+          - email
+          - id
+          - profile
+          - username
+          - views
+          filter:
+            id:
+              _eq: X-Hasura-User-Id
+        role: driver
+      - permission:
+          columns:
+          - id
+          - profile
+          - username
+          filter: {}
+        role: public
+      table:
+        name: users
+        schema: public
+      update_permissions:
+      - permission:
+          columns:
+          - profile
+          filter:
+            id:
+              _eq: X-Hasura-User-Id
+        role: driver
+    version: 2
+  type: replace_metadata
