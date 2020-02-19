@@ -98,10 +98,12 @@ module.exports = function(proxy, allowedHost) {
       // it used the same host and port.
       // https://github.com/facebook/create-react-app/issues/2272#issuecomment-302832432
       app.use(noopServiceWorkerMiddleware());
-
+      app.use(require('body-parser').json());
       app.get('/api/scrape/title', require('../api/scrape/title'));
       app.get('/api/signedUrl', require('../api/signedUrl'));
       app.get('/api/analytics-viewed', require('../api/analytics-viewed'));
+      app.get('/api/thanks', require('../api/thanks'));
+      app.post('/api/login', require('../api/login'));
     },
   };
 };
