@@ -5,16 +5,23 @@ import Data.User as User
 import Dict
 import Html exposing (Html)
 import Html.Attributes as Attributes
+import Html.Events as Events
+import Http
 import Network.Api as Api
+import Network.SignedUrl as SignedUrl
 import Network.User as User
+import Network.Util as Util
 import Page.Profile as Profile
 import Route
 import Task
+import Url.Builder
 
 
 type alias Model =
     { session : Session
     , profile : Maybe User.PublicProfile
+    , maybeEmail : Maybe String
+    , savedEmail : Bool
     }
 
 
@@ -22,11 +29,18 @@ type Msg
     = NoOp
     | ProfileMsg Profile.Msg
     | GotProfile (Result Api.Error User.PublicProfile)
+    | SetEmail String
+    | SaveEmail
+    | SaveEmailResponse (Result Http.Error String)
+
+
+initialModel session =
+    { session = session, profile = Nothing, maybeEmail = Nothing, savedEmail = False }
 
 
 init : Session -> String -> ( Model, Cmd Msg )
 init session username =
-    ( { session = session, profile = Nothing }
+    ( initialModel session
     , User.profileQuery username
         |> Task.attempt GotProfile
     )
@@ -45,8 +59,39 @@ update msg model =
         ProfileMsg _ ->
             ( model, Cmd.none )
 
-        NoOp ->
+        SetEmail email ->
+            ( { model | maybeEmail = Just email }, Cmd.none )
+
+        SaveEmail ->
+            case model.maybeEmail of
+                Just email ->
+                    ( model
+                    , saveEmail email
+                        |> Task.attempt SaveEmailResponse
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        SaveEmailResponse (Ok res) ->
+            ( { model | maybeEmail = Just res, savedEmail = True }, Cmd.none )
+
+        _ ->
             ( model, Cmd.none )
+
+
+saveEmail email =
+    Http.task
+        { method = "get"
+        , headers = []
+        , body = Http.emptyBody
+        , resolver = Http.stringResolver Util.resolver
+        , url =
+            Url.Builder.absolute [ "api", "thanks" ]
+                [ Url.Builder.string "key" email
+                ]
+        , timeout = Nothing
+        }
 
 
 view : Model -> Html Msg
@@ -59,11 +104,32 @@ view model =
                 [ Attributes.class "text-3xl mt-4  md:-mt-24 font-light"
                 ]
                 [ Html.text "Mods in Bio" ]
-            , Html.p [ Attributes.class "text-xl mt-2 mb-3" ] [ Html.text "Share links to your car's mods with your followers and fans." ]
-            , Html.p
-                [ Attributes.class "text-sm border px-2 py-2 w-32 mx-auto @todo font-semibold"
+            , Html.p [ Attributes.class "text-xl mt-2 mb-3" ]
+                [ Html.text "Share links to your car's mods with your followers and fans." ]
+            , Html.form [ Events.onSubmit SaveEmail ]
+                [ Html.p [ Attributes.class "mt-12 mb-2" ] [ Html.text "Be the first to know when it's live." ]
+                , Html.label []
+                    [ Html.span [ Attributes.class "font-medium block sm:hidden mr-2 " ]
+                        [ Html.text "Leave your email here ↓" ]
+                    , Html.span [ Attributes.class "font-medium hidden sm:inline-block mr-2 " ]
+                        [ Html.text "Leave your email here →" ]
+                    , Html.input
+                        [ Attributes.class "block sm:inline-block text-sm border px-2 py-2 w-full sm:w-1/4 mx-auto @todo font-semibold"
+                        , Attributes.placeholder "hellofromus@modsinbio.com"
+                        , model.maybeEmail
+                            |> Maybe.map Attributes.value
+                            |> Maybe.withDefault (Attributes.value "")
+                        , Events.onInput SetEmail
+                        ]
+                        []
+                    , Html.button
+                        [ Attributes.class " px-4 py-2 font-medium text-center rounded-sm border w-full sm:w-32 mt-2 mb-1 sm:ml-2"
+                        , Attributes.classList [ ( "cursor-not-allowed", model.savedEmail ) ]
+                        , Attributes.disabled model.savedEmail
+                        ]
+                        [ Html.text "Submit" ]
+                    ]
                 ]
-                [ Html.text "Sign up for free" ]
             ]
         , Html.div
             [ Attributes.class "md:w-4/5 mx-auto  px-4 pt-12 pb-8"

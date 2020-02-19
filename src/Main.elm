@@ -155,7 +155,8 @@ changeRouteTo maybeRoute model =
                 |> Tuple.mapSecond (Cmd.map HomeMsg)
 
         ( Nothing, _ ) ->
-            ( Home { session = session, profile = Nothing }, Cmd.none )
+            -- todo
+            ( Home <| Home.initialModel session, Cmd.none )
 
         ( Just Route.Login, _ ) ->
             ( Login { session = session }, Cmd.none )
@@ -172,7 +173,7 @@ changeRouteTo maybeRoute model =
                     ( model, Cmd.none )
 
         ( _, User.Public ) ->
-            ( Home { session = session, profile = Nothing }, Nav.replaceUrl session.key (Route.routeToString Route.Home) )
+            ( Home <| Home.initialModel session, Nav.replaceUrl session.key (Route.routeToString Route.Home) )
 
         ( Just Route.Settings, _ ) ->
             ( Settings { session = session }, Cmd.none )
