@@ -19,6 +19,7 @@ import Json.Encode as Encode
 import Network.Api as Api
 import Network.Scraper as Scraper
 import Network.SignedUrl as SignedUrl
+import Network.Util as Util
 import Network.User as User
 import Network.Vehicle as Vehicle
 import Page.Profile as Profile
@@ -1185,6 +1186,6 @@ uploadFile token { url, file } =
         , headers = [] --  (Api.authHeaders token)
         , url = url
         , body = Http.fileBody file
-        , resolver = Http.stringResolver SignedUrl.resolver
+        , resolver = Http.stringResolver Util.resolver
         , timeout = Nothing
         }

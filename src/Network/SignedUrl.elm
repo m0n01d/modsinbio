@@ -1,9 +1,10 @@
-module Network.SignedUrl exposing (getSignedUrl, resolver)
+module Network.SignedUrl exposing (getSignedUrl)
 
 import Data.User as User
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Network.Util as Util
 import Url.Builder
 
 
@@ -13,7 +14,7 @@ getSignedUrl token userId mimeType =
         { method = "get"
         , headers = []
         , body = Http.emptyBody
-        , resolver = Http.stringResolver resolver
+        , resolver = Http.stringResolver Util.resolver
         , url =
             Url.Builder.absolute [ "api", "signedUrl" ]
                 [ Url.Builder.string "key" (User.idToString userId)
@@ -21,27 +22,3 @@ getSignedUrl token userId mimeType =
                 ]
         , timeout = Nothing
         }
-
-
-resolver response =
-    -- todo move to utils
-    case response of
-        Http.BadUrl_ url ->
-            Err (Http.BadUrl url)
-
-        Http.Timeout_ ->
-            Err Http.Timeout
-
-        Http.NetworkError_ ->
-            Err Http.NetworkError
-
-        Http.BadStatus_ metadata body ->
-            Err (Http.BadStatus metadata.statusCode)
-
-        Http.GoodStatus_ metadata body ->
-            case Decode.decodeValue Decode.string (Encode.string body) of
-                Ok value ->
-                    Ok value
-
-                Err err ->
-                    Err (Http.BadBody (Decode.errorToString err))
