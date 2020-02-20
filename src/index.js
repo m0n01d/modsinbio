@@ -8,15 +8,13 @@ require('./Elements/LinkClick')();
 const hostname = window.location.hostname;
 
 const flags = {
-  payload: {
-    user: localStorage.user ? JSON.parse(localStorage.user) : null,
-    env:
-      hostname == 'modsinbio.com'
-        ? 'PROD'
-        : hostname == 'localhost'
-        ? 'DEV'
-        : 'STAGING',
-  },
+  user: localStorage.user ? JSON.parse(localStorage.user) : null,
+  env:
+    hostname == 'modsinbio.com'
+      ? 'PROD'
+      : hostname == 'localhost'
+      ? 'DEV'
+      : 'STAGING',
 };
 
 const app = Elm.Main.init({
