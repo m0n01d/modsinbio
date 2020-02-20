@@ -49,8 +49,8 @@ update msg model =
             )
 
         ReceivedAuth _ (Err err) ->
-            let
-                _ =
-                    Debug.log "todo " err
-            in
+            -- let
+            --     _ =
+            --         Debug.log "todo " err
+            -- in
             ( model, Cmd.none )

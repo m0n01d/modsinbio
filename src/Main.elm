@@ -37,7 +37,6 @@ type Model
 
 type alias DecodedFlags =
     { user : User.User
-    , env : Session.Env
     }
 
 
@@ -48,7 +47,6 @@ type alias Flags =
 decoder =
     Decode.succeed DecodedFlags
         |> Decode.required "user" User.decodeDriver
-        |> Decode.required "env" Session.decodeEnv
 
 
 decodeFlags : Flags -> Result Decode.Error DecodedFlags
@@ -62,9 +60,9 @@ init flags url key =
         decoded =
             decodeFlags flags
     in
-    case  decoded of
-        Ok { user, env } ->
-            Redirect { key = key, user = user, env = env }
+    case decoded of
+        Ok { user } ->
+            Redirect { key = key, user = user }
                 |> changeRouteTo (Route.fromUrl url)
 
         Err e ->
@@ -72,7 +70,7 @@ init flags url key =
             --     _ =
             --         Debug.log "why" e
             -- in
-            ( Redirect { key = key, user = User.Public, env = Session.defaultEnv }, Cmd.none )
+            ( Redirect { key = key, user = User.Public }, Cmd.none )
 
 
 
@@ -211,8 +209,9 @@ changeRouteTo maybeRoute model =
                     MyMods.update MyMods.InitializeMyMods (MyMods.initialModel session profile)
                         |> Tuple.mapFirst MyMods
                         |> Tuple.mapSecond (Cmd.map MyModsMsg)
+
                 _ ->
-                    (model, Cmd.none)
+                    ( model, Cmd.none )
 
 
 
