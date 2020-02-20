@@ -196,7 +196,7 @@ type alias Model =
 init : Session.Session -> String -> ( Model, Cmd Msg )
 init session username =
     ( { session = session, profile = Nothing }
-    , User.profileQuery session.env username
+    , User.profileQuery username
         |> Task.attempt GotProfile
     )
 
@@ -209,7 +209,7 @@ update msg model =
 
         GotProfile (Ok profile) ->
             ( { model | profile = Just profile }
-            , User.incrementViewCount model.session.env profile.profile IncrementedView
+            , User.incrementViewCount profile.profile IncrementedView
             )
 
         GotProfile (Err err) ->
@@ -217,7 +217,7 @@ update msg model =
 
         LinkClicked id ->
             ( model
-            , Link.clickedMutation model.session.env id
+            , Link.clickedMutation id
                 |> Task.attempt LinkClickedResponse
             )
 

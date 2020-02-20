@@ -590,7 +590,7 @@ update msg model =
                     Api.document Category.queryDocument []
             in
             ( model
-            , Api.authedQuery session.env (User.sessionToken session) document Nothing Category.decodeModCategories
+            , Api.authedQuery (User.sessionToken session) document Nothing Category.decodeModCategories
                 |> Task.attempt Initialized
             )
 
@@ -639,7 +639,7 @@ update msg model =
                                     Category.decodeCategory
                     in
                     ( model
-                    , Api.authedQuery session.env
+                    , Api.authedQuery
                         token
                         (Api.document Category.insert [])
                         encodedVars
@@ -666,7 +666,7 @@ update msg model =
                                     (Decode.index 0 Category.decodeCategory)
                     in
                     ( model
-                    , Api.authedQuery session.env (User.sessionToken session) (Api.document Category.update []) (Just encodedVars) decoder
+                    , Api.authedQuery (User.sessionToken session) (Api.document Category.update []) (Just encodedVars) decoder
                         |> Task.attempt CategoryResponse
                     )
 
@@ -906,7 +906,7 @@ update msg model =
                                         Decode.succeed identity
                                             |> Decode.requiredAt [ "insert_links", "returning" ] (Decode.index 0 Link.decode)
                                 in
-                                Api.authedQuery session.env (User.sessionToken session) (Api.document Link.insert []) (Just encodedVars) decoder
+                                Api.authedQuery (User.sessionToken session) (Api.document Link.insert []) (Just encodedVars) decoder
                                     |> Task.attempt (AddLinkResponse categoryId)
 
                             Nothing ->
@@ -951,7 +951,7 @@ update msg model =
                             (Decode.index 0 (Decode.value |> Decode.map (always link.id)))
             in
             ( model
-            , Api.authedQuery session.env (User.sessionToken session) (Api.document Link.deleteLink []) encodedVars decoder
+            , Api.authedQuery (User.sessionToken session) (Api.document Link.deleteLink []) encodedVars decoder
                 |> Task.attempt (DeleteLinkResponse categoryId)
             )
 
@@ -985,7 +985,7 @@ update msg model =
                             (Decode.index 0 Link.decode)
             in
             ( model
-            , Api.authedQuery session.env (User.sessionToken session) (Api.document Link.updateIsActive []) encodedVars decoder
+            , Api.authedQuery (User.sessionToken session) (Api.document Link.updateIsActive []) encodedVars decoder
                 |> Task.attempt (ToggleLinkActiveResponse categoryId)
             )
 
@@ -1100,7 +1100,7 @@ update msg model =
             ( model
             , case session.user of
                 User.Driver token p ->
-                    User.updateUserMutation session.env token p.id profile model.maybeNewUsername
+                    User.updateUserMutation token p.id profile model.maybeNewUsername
                         |> Task.attempt (SaveMyProfileResponse profile)
 
                 _ ->
@@ -1111,7 +1111,7 @@ update msg model =
             let
                 ( u, cmd ) =
                     case session.user of
-                        ( User.Driver token p) ->
+                        User.Driver token p ->
                             ( User.Driver token { p | profile = Just profile, username = model.maybeNewUsername }
                             , Session.saveUser token { p | profile = Just profile }
                             )

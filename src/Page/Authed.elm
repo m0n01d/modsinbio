@@ -21,7 +21,7 @@ type Msg
 init oldSession token =
     let
         fetchUser =
-            User.query oldSession.env oldSession token
+            User.query oldSession token
                 |> Task.attempt (ReceivedAuth token)
     in
     ( { session = { oldSession | user = User.DriverPartial token } }, fetchUser )

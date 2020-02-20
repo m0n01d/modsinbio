@@ -1,6 +1,5 @@
 module Network.Api exposing (..)
 
-import Data.Session as Session exposing (Env(..))
 import Data.User as User
 import Http
 import Json.Decode as Decode exposing (Decoder)
@@ -10,13 +9,8 @@ import Task exposing (Task)
 import Url.Builder as Builder
 
 
-apiUrl env =
-    case env of
-        Dev ->
-            "http://localhost:8080"
-
-        _ ->
-            "http://localhost:8080"
+apiUrl =
+    "%API_URL%"
 
 
 type Fragment
@@ -45,24 +39,24 @@ document operation fragments =
     Document operation (flatten fragments)
 
 
-queryTask : Session.Env -> List Http.Header -> Http.Body -> Decoder a -> Task Error a
-queryTask env headers body decoder =
+queryTask : List Http.Header -> Http.Body -> Decoder a -> Task Error a
+queryTask headers body decoder =
     Http.task
         { method = "POST"
         , headers = headers
-        , url = Builder.crossOrigin (apiUrl env) [ "v1", "graphql" ] []
+        , url = Builder.crossOrigin apiUrl [ "v1", "graphql" ] []
         , body = body
         , resolver = jsonResolver decoder
         , timeout = Nothing
         }
 
 
-authedQuery env token doc maybeVariables =
-    queryTask env (authHeaders token) (Http.jsonBody (buildBody doc maybeVariables))
+authedQuery token doc maybeVariables =
+    queryTask (authHeaders token) (Http.jsonBody (buildBody doc maybeVariables))
 
 
-unauthedQuery env doc maybeVariables =
-    queryTask env unAuthedHeaders (Http.jsonBody (buildBody doc maybeVariables))
+unauthedQuery doc maybeVariables =
+    queryTask unAuthedHeaders (Http.jsonBody (buildBody doc maybeVariables))
 
 
 jsonResolver : Decoder a -> Http.Resolver Error a
