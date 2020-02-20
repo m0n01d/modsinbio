@@ -70,11 +70,11 @@ init flags url key =
             --     _ =
             --         Debug.log "why" e
             -- in
-            ( Redirect { key = key, user = User.Public }, Cmd.none )
+            Redirect { key = key, user = User.Public }
+                |> changeRouteTo (Route.fromUrl url)
 
 
 
--- |> changeRouteTo (Route.fromUrl url)
 ---- UPDATE ----
 
 
