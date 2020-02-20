@@ -21,7 +21,7 @@ type Msg
 init oldSession token =
     let
         fetchUser =
-            User.query oldSession token
+            User.query oldSession.env oldSession token
                 |> Task.attempt (ReceivedAuth token)
     in
     ( { session = { oldSession | user = User.DriverPartial token } }, fetchUser )
@@ -49,8 +49,8 @@ update msg model =
             )
 
         ReceivedAuth _ (Err err) ->
-            -- let
-            --     _ =
-            --         Debug.log "todo " err
-            -- in
+            let
+                _ =
+                    Debug.log "todo " err
+            in
             ( model, Cmd.none )

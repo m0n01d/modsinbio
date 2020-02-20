@@ -41,7 +41,7 @@ initialModel session =
 init : Session -> String -> ( Model, Cmd Msg )
 init session username =
     ( initialModel session
-    , User.profileQuery username
+    , User.profileQuery session.env username
         |> Task.attempt GotProfile
     )
 

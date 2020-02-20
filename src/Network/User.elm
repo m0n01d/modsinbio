@@ -76,8 +76,8 @@ decoder_ =
         |> Decode.required "users" (Decode.index 0 User.decodeDriverProfile)
 
 
-query session token =
-    Api.authedQuery token document Nothing decoder_
+query env session token =
+    Api.authedQuery env token document Nothing decoder_
 
 
 sessionToken { user } =
@@ -97,16 +97,16 @@ profileDecoder_ =
         |> Decode.required "users" (Decode.index 0 User.decodePublicProfile)
 
 
-profileQuery username =
+profileQuery env username =
     let
         vars =
             Encode.object [ ( "profile", Encode.string username ) ]
                 |> Just
     in
-    Api.unauthedQuery (Api.document fetchProfile []) vars profileDecoder_
+    Api.unauthedQuery env (Api.document fetchProfile []) vars profileDecoder_
 
 
-updateUserMutation token id profile =
+updateUserMutation env token id profile =
     let
         -- {"id":"fd1f55d0-b14f-4ccc-8821-4cbf5f0710a6", "profile": {"bio":"it dwit"}}
         vars =
@@ -118,10 +118,10 @@ updateUserMutation token id profile =
                 ]
                 |> Just
     in
-    Api.authedQuery token (Api.document updateProfile []) vars (Decode.succeed ())
+    Api.authedQuery env token (Api.document updateProfile []) vars (Decode.succeed ())
 
 
-incrementViewCount { id } onComplete =
+incrementViewCount env { id } onComplete =
     let
         vars =
             [ Url.Builder.string "id" (User.idToString id)

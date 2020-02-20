@@ -18,11 +18,11 @@ mutation LinkClicked($id:uuid!) {
 """
 
 
-clickedMutation id =
+clickedMutation env id =
     let
         vars =
             Encode.object
                 [ ( "id", Link.encodeId id ) ]
                 |> Just
     in
-    Api.unauthedQuery (Api.document addLink []) vars (Decode.succeed ())
+    Api.unauthedQuery env (Api.document addLink []) vars (Decode.succeed ())
