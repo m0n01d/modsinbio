@@ -21,12 +21,10 @@ function login(req, res) {
 
 // TODO error handling
 function loginOrCreate(email) {
-  console.log({ email });
   return User.query()
     .where('email', email)
     .first()
     .then(user => {
-      console.log('user', user);
       if (!user) {
         return createUser(email);
       }
@@ -39,12 +37,10 @@ function getJwt(user) {
 }
 
 function createUser(email) {
-  console.log('create', email);
   return User.query().insert({ email });
 }
 
 function sendAuthEmail({ email, jwt }) {
-  console.log({ email, jwt });
   return sendEmail({
     html: `<p>${jwt}</p>`,
     to: email,
