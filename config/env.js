@@ -76,6 +76,8 @@ function getClientEnvironment(publicUrl) {
         API_URL:
           process.env.APP_ENV == 'development'
             ? 'http://localhost:8080'
+            : process.env.NOW_GITHUB_COMMIT_REF == 'master'
+            ? 'https://TODO-ROUTE-TO-DIGITAL-OCEAN'
             : 'https://mods-dev.herokuapp.com/',
       }
     );
