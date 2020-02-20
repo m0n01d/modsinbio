@@ -62,17 +62,21 @@ init flags url key =
         decoded =
             decodeFlags flags
     in
-    case decoded of
+    case  decoded of
         Ok { user, env } ->
             Redirect { key = key, user = user, env = env }
                 |> changeRouteTo (Route.fromUrl url)
 
-        Err _ ->
-            Redirect { key = key, user = User.Public, env = Session.defaultEnv }
-                |> changeRouteTo (Route.fromUrl url)
+        Err e ->
+            -- let
+            --     _ =
+            --         Debug.log "why" e
+            -- in
+            ( Redirect { key = key, user = User.Public, env = Session.defaultEnv }, Cmd.none )
 
 
 
+-- |> changeRouteTo (Route.fromUrl url)
 ---- UPDATE ----
 
 
@@ -202,9 +206,13 @@ changeRouteTo maybeRoute model =
             ( Settings { session = session }, Cmd.none )
 
         ( Just Route.Admin, _ ) ->
-            MyMods.update MyMods.InitializeMyMods (MyMods.initialModel session)
-                |> Tuple.mapFirst MyMods
-                |> Tuple.mapSecond (Cmd.map MyModsMsg)
+            case session.user of
+                User.Driver token profile ->
+                    MyMods.update MyMods.InitializeMyMods (MyMods.initialModel session profile)
+                        |> Tuple.mapFirst MyMods
+                        |> Tuple.mapSecond (Cmd.map MyModsMsg)
+                _ ->
+                    (model, Cmd.none)
 
 
 
