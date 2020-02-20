@@ -28,7 +28,7 @@ page model =
                         |> List.filter (.links >> List.isEmpty >> not)
                         |> List.sortBy .order
             in
-            { title = profile.username
+            { title = profile.username |> Maybe.withDefault "-"
             , content = view mods_ profile
             }
 
@@ -64,11 +64,14 @@ view mods profile =
                         [ Html.h1 [ Attributes.class "text-left font-medium text-lg mt-2 mb-px" ]
                             [ Html.a
                                 [ Attributes.href <|
-                                    String.concat [ "https://instagram.com/", profile.username ]
+                                    String.concat
+                                        [ "https://instagram.com/"
+                                        , profile.username |> Maybe.withDefault "modsinbio"
+                                        ]
                                 , Attributes.target "_blank"
                                 , Attributes.rel "noopener"
                                 ]
-                                [ Html.text <| String.concat [ "@", profile.username ]
+                                [ Html.text <| String.concat [ "@", profile.username |> Maybe.withDefault "modsinbio" ]
                                 ]
                             ]
                         , case profile.profile of

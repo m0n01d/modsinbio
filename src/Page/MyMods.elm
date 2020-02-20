@@ -3,7 +3,7 @@ module Page.MyMods exposing (..)
 import Data.Category as Category exposing (Category, CategoryId)
 import Data.Link as Link exposing (Link, MorePanel(..))
 import Data.Session as Session exposing (Session)
-import Data.User as User exposing (User)
+import Data.User as User exposing (DriverProfile, User)
 import Data.Vehicle as Vehicle
 import Dict exposing (Dict)
 import File
@@ -63,6 +63,7 @@ type alias Model =
     , profile : User.Profile
     , maybeNewAvatar : Maybe String
     , maybeAvatarFile : Maybe File.File
+    , maybeNewUsername : Maybe String
     }
 
 
@@ -77,8 +78,8 @@ type alias Mods =
     Dict CategoryId Category
 
 
-initialModel : Session -> Model
-initialModel session =
+initialModel : Session -> DriverProfile -> Model
+initialModel session profile =
     { session = session
     , mods = Dict.fromList []
     , isNewCategoryFormVisible = False
@@ -93,6 +94,7 @@ initialModel session =
         }
     , maybeNewAvatar = Nothing
     , maybeAvatarFile = Nothing
+    , maybeNewUsername = profile.username
     }
 
 
@@ -114,7 +116,7 @@ view model =
                 [ Html.div [ Attributes.class "mt-4 md:px-8 pb-8" ]
                     [ case session.user of
                         User.Driver _ profile ->
-                            viewMyBio model profile
+                            viewMyBio model.maybeNewUsername model profile
 
                         _ ->
                             Html.nothing
@@ -247,7 +249,7 @@ view model =
 -- viewMyBio : User.Profile -> Html Msg
 
 
-viewMyBio { profile, maybeNewAvatar } driverProfile =
+viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
     Html.div [ Attributes.class "w-full md:w-1/x2 md:mb-8" ]
         [ Html.p [ Attributes.class "font-semibold text-center" ]
             [ Html.text "My car:"
@@ -259,6 +261,7 @@ viewMyBio { profile, maybeNewAvatar } driverProfile =
                     ]
                 , Html.button
                     [ Attributes.class "ml-2 px-4 py-2 font-medium text-center rounded-sm border block w-32 mb-1"
+                    , Attributes.classList [ ( "hidden", maybeNewAvatar /= Nothing ) ]
                     , Events.onClick AskForAvatarFile
                     ]
                     [ Html.text "Select image" ]
@@ -293,7 +296,23 @@ viewMyBio { profile, maybeNewAvatar } driverProfile =
             ]
         , Html.form [ Events.onSubmit SaveMyProfile ]
             [ Html.div [ Attributes.class "mb-2" ]
-                [ Html.label [ Attributes.class "mr-1 block font-medium mb-1" ] [ Html.text "Year" ]
+                [ Html.label [ Attributes.class "mr-1 block font-medium mb-1" ]
+                    [ Html.text "Username" ]
+                , Html.input
+                    [ Attributes.class "border rounded-sm block w-full px-2 py-1"
+                    , Attributes.placeholder "@yourinsta"
+
+                    -- , Events.onFocus FetchVehicleMakes
+                    , Events.onInput SetUsername
+                    , maybeNewUsername
+                        |> Maybe.map Attributes.value
+                        |> Maybe.withDefault (Attributes.value "")
+                    ]
+                    []
+                ]
+            , Html.div [ Attributes.class "mb-2" ]
+                [ Html.label [ Attributes.class "mr-1 block font-medium mb-1" ]
+                    [ Html.text "Year" ]
                 , Html.input
                     [ Attributes.class "border rounded-sm block w-full px-2 py-1"
                     , Attributes.type_ "text"
@@ -554,6 +573,7 @@ type Msg
     | RemoveNewAvatar
     | SaveNewAvatar
     | SaveNewAvatarResponse (Result Http.Error String)
+    | SetUsername String
     | NoOp
 
 
@@ -1080,7 +1100,7 @@ update msg model =
             ( model
             , case session.user of
                 User.Driver token p ->
-                    User.updateUserMutation session.env token p.id profile
+                    User.updateUserMutation session.env token p.id profile model.maybeNewUsername
                         |> Task.attempt (SaveMyProfileResponse profile)
 
                 _ ->
@@ -1091,8 +1111,8 @@ update msg model =
             let
                 ( u, cmd ) =
                     case session.user of
-                        User.Driver token p ->
-                            ( User.Driver token { p | profile = Just profile }
+                        ( User.Driver token p) ->
+                            ( User.Driver token { p | profile = Just profile, username = model.maybeNewUsername }
                             , Session.saveUser token { p | profile = Just profile }
                             )
 
@@ -1152,6 +1172,13 @@ update msg model =
         SaveNewAvatarResponse (Err _) ->
             -- @todo
             ( model, Cmd.none )
+
+        SetUsername s ->
+            if String.trim s /= "" then
+                ( { model | maybeNewUsername = Just s }, Cmd.none )
+
+            else
+                ( { model | maybeNewUsername = Nothing }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
