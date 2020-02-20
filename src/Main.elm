@@ -6,8 +6,9 @@ import Data.Session as Session
 import Data.User as User
 import Html exposing (Html, div, h1, img, text)
 import Html.Attributes as Attributes exposing (src)
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Value)
 import Json.Decode.Extra as Decode
+import Json.Decode.Pipeline as Decode
 import Network.Api as Api
 import Page.Authed as Authed
 import Page.Home as Home
@@ -34,19 +35,41 @@ type Model
     | Profile Profile.Model
 
 
+type alias DecodedFlags =
+    { user : User.User
+    , env : Session.Env
+    }
+
+
 type alias Flags =
-    Decode.Value
+    Value
 
 
-decodeFlags str =
-    Decode.decodeValue User.decodeDriver str
-        |> Result.withDefault User.Public
+decoder =
+    Decode.succeed DecodedFlags
+        |> Decode.required "user" User.decodeDriver
+        |> Decode.required "env" Session.decodeEnv
+
+
+decodeFlags : Flags -> Result Decode.Error DecodedFlags
+decodeFlags flags =
+    Decode.decodeValue decoder flags
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    Redirect { key = key, user = decodeFlags flags }
-        |> changeRouteTo (Route.fromUrl url)
+    let
+        decoded =
+            decodeFlags flags
+    in
+    case decoded of
+        Ok { user, env } ->
+            Redirect { key = key, user = user, env = env }
+                |> changeRouteTo (Route.fromUrl url)
+
+        Err _ ->
+            Redirect { key = key, user = User.Public, env = Session.defaultEnv }
+                |> changeRouteTo (Route.fromUrl url)
 
 
 
