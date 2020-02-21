@@ -8,15 +8,15 @@ function login(req, res) {
   const { email } = req.body;
 
   if (!email) {
-    return res.setStatus(404).res.end();
+    return res.status(404).send();
   }
   return loginOrCreate(email)
     .then(getJwt)
     .then(jwt => {
-      sendAuthEmail({ email, jwt });
+      return sendAuthEmail({ email, jwt });
     })
-    .then(_ => res.sendStatus(200))
-    .catch(e => res.send(e));
+    .then(_ => res.status(200).send())
+    .catch(e => res.status(500).send(e));
 }
 
 // TODO error handling
