@@ -235,9 +235,14 @@ view model =
 
 
 navbar model =
-    Html.header [ Attributes.class "h-6 py-8 px-2 border-b border-grey-500 flex items-center" ]
-        [ Html.text "Navbar"
-        ]
+    case model of
+        Profile _ ->
+            Html.text ""
+
+        _ ->
+            Html.header [ Attributes.class "h-6 py-8 px-2 border-b border-grey-500 flex items-center" ]
+                [ Html.text "Navbar"
+                ]
 
 
 viewContent : Model -> { title : String, content : Html Msg }
