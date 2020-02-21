@@ -40,7 +40,7 @@ page model =
 view : List Category -> DriverProfile -> Html Msg
 view mods profile =
     Html.div
-        [ Attributes.class "max-h-full  overflow-y-scroll"
+        [ Attributes.class "max-h-screen  overflow-y-scroll"
         ]
         [ Html.div
             [ Attributes.class "  rounded max-w-full max-w-full "
