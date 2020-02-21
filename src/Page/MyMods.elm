@@ -279,20 +279,20 @@ viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
                             [ Html.text "Cancel" ]
                         ]
                 ]
-            , case maybeNewAvatar of
-                Just avatar ->
-                    Html.img [ Attributes.class "w-32 mx-auto", Attributes.src avatar ] []
+            , Html.img
+                [ Attributes.class "w-32 mx-auto"
+                , case maybeNewAvatar of
+                    Just avatar ->
+                        Attributes.src avatar
 
-                Nothing ->
-                    Html.img
-                        [ Attributes.class "w-32 mx-auto"
-                        , Attributes.src <|
+                    Nothing ->
+                        Attributes.src <|
                             String.concat
                                 [ "https://dev-mods-in-bio.s3.amazonaws.com/"
                                 , User.idToString driverProfile.id
                                 ]
-                        ]
-                        []
+                ]
+                []
             ]
         , Html.form [ Events.onSubmit SaveMyProfile ]
             [ Html.div [ Attributes.class "mb-2" ]
