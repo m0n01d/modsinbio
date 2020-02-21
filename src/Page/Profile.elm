@@ -136,8 +136,8 @@ viewCategory { name, links } =
 viewPreviewLink : Link -> Html Msg
 viewPreviewLink { title, description, urlString, id } =
     Html.li []
-        [ Html.div [ Attributes.class "my-3 px-1" ]
-            [ Html.div []
+        [ Html.div [ Attributes.class "my-4 px-1" ]
+            [ Html.div [ Attributes.class "mb-1" ]
                 [ Html.node "ui-link-click"
                     [ Decode.succeed (LinkClicked id)
                         |> Events.on "LinkClicked"
@@ -155,7 +155,7 @@ viewPreviewLink { title, description, urlString, id } =
                 Html.node "ui-openable"
                     []
                     [ Html.button
-                        [ Attributes.class "block bg-gray-300 text-gray-800 w-full text-lg font-bold monospace mt-px"
+                        [ Attributes.class "block bg-gray-300 hover:bg-gray-400 text-gray-800 w-full text-lg font-bold monospace mt-px py-px"
                         , Attributes.attribute "Openable__activator" ""
                         ]
                         [ Html.text "···"
@@ -168,7 +168,7 @@ viewPreviewLink { title, description, urlString, id } =
                         [ Html.p [] [ Html.text description ]
                         ]
                     , Html.button
-                        [ Attributes.class "hidden block bg-gray-300 text-gray-800 w-full text-lg font-bold monospace mt-px"
+                        [ Attributes.class "hidden block hover:bg-gray-400 bg-gray-300 text-gray-800 w-full text-lg font-bold monospace mt-px py-px"
                         , Attributes.attribute
                             "Openable__deactivator"
                             ""
