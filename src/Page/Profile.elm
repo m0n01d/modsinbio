@@ -60,7 +60,7 @@ view mods profile =
                                 ]
                         ]
                         []
-                    , Html.div [ Attributes.class "px-2" ]
+                    , Html.div [ Attributes.class "px-4" ]
                         [ Html.h1 [ Attributes.class "text-left font-medium text-lg mt-2 mb-px" ]
                             [ Html.a
                                 [ Attributes.href <|

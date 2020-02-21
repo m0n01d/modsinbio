@@ -228,7 +228,7 @@ view model =
     , body =
         [ div [ Attributes.class "container mx-auto root flex flex-col" ]
             [ navbar model
-            , Html.main_ [ Attributes.class "px-2 flex-1" ] [ content ]
+            , Html.main_ [ Attributes.class "flex-1" ] [ content ]
             ]
         ]
     }
