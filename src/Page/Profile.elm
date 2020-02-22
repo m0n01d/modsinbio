@@ -31,7 +31,7 @@ page model =
                         |> view profile
             in
             { title = profile.username |> Maybe.withDefault "-"
-            , content = content
+            , content = Html.div [ Attributes.class "sm:w-2/3 md:w-1/3 mx-auto" ] [ content ]
             }
 
         Loading ->
@@ -49,7 +49,7 @@ loadingState =
 view : DriverProfile -> List Category -> Html Msg
 view profile mods =
     Html.div
-        [ Attributes.class "pb-8"
+        [ Attributes.class "pb-8 "
         ]
         [ Html.div
             [ Attributes.class "rounded max-w-full max-w-full "
