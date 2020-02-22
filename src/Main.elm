@@ -240,8 +240,8 @@ navbar model =
             Html.text ""
 
         _ ->
-            Html.header [ Attributes.class "h-6 py-8 px-2 border-b border-grey-500 flex items-center" ]
-                [ Html.text "Navbar"
+            Html.header [ Attributes.class "h-6 py-8 px-4 border-b border-grey-500 flex items-center" ]
+                [ Html.a [ Route.href Route.Home ] [ Html.text "Mods in Bio" ]
                 ]
 
 

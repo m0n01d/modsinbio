@@ -101,7 +101,8 @@ view model =
             [ Attributes.class "text-center mx-auto text-center md:min-h-screen  flex flex-col justify-center"
             ]
             [ Html.h1
-                [ Attributes.class "text-3xl mt-4  md:-mt-24 font-light"
+                [ Attributes.class "text-3xl mt-4  md:-mt-24 font-light font-bold "
+                , Attributes.style "transform" "scale(1.5)"
                 ]
                 [ Html.text "Mods in Bio" ]
             , Html.p [ Attributes.class "text-xl mt-2 mb-3" ]
@@ -124,7 +125,11 @@ view model =
                         []
                     , Html.button
                         [ Attributes.class " px-4 py-2 font-medium text-center rounded-sm border w-full sm:w-32 mt-2 mb-1 sm:ml-2"
-                        , Attributes.classList [ ( "cursor-not-allowed", model.savedEmail ) ]
+                        , Attributes.classList
+                            [ ( "cursor-not-allowed opacity-75"
+                              , model.savedEmail
+                              )
+                            ]
                         , Attributes.disabled model.savedEmail
                         ]
                         [ Html.text "Submit" ]
@@ -135,7 +140,7 @@ view model =
             [ Attributes.class "md:w-4/5 mx-auto  pt-12 pb-8"
             ]
             [ Html.div [ Attributes.class "text-center mb-12" ]
-                [ Html.h2 [ Attributes.class "text-2xl" ]
+                [ Html.h2 [ Attributes.class "text-2xl font-semibold" ]
                     [ Html.text "Show off your upgrades." ]
                 , Html.p []
                     [ Html.text "Everyone wants to know where to find your favorite mods."
@@ -161,9 +166,20 @@ view model =
                                 -- @TODO error handling
                                 Html.text ""
                         ]
+                    , Html.p
+                        [ Attributes.class "font-monospace text-center mt-4"
+                        , Attributes.style "font-family" "monospace"
+                        ]
+                        [ Html.a
+                            [ Route.href <| Route.Profile "dwrxht"
+                            , Attributes.target "_blank"
+                            , Attributes.rel "noopener"
+                            ]
+                            [ Html.text "https://modsinbio.com/dwrxht" ]
+                        ]
                     ]
                 , Html.div [ Attributes.class "flex-1" ]
-                    [ Html.h4 [ Attributes.class "text-lg mb-2" ] [ Html.text "How it works" ]
+                    [ Html.h4 [ Attributes.class "text-lg mb-2 font-semibold" ] [ Html.text "How it works" ]
                     , Html.p [] [ Html.text "Sign up now for free." ]
                     , Html.p [] [ Html.text "Add links to your car's mods." ]
                     , Html.p []
