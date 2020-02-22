@@ -101,8 +101,7 @@ view model =
             [ Attributes.class "text-center mx-auto text-center md:min-h-screen  flex flex-col justify-center"
             ]
             [ Html.h1
-                [ Attributes.class "text-3xl mt-4  md:-mt-24 font-light font-bold "
-                , Attributes.style "transform" "scale(1.5)"
+                [ Attributes.class "text-6xl mt-4 pt-4 md:-mt-24 font-light font-bold "
                 ]
                 [ Html.text "Mods in Bio" ]
             , Html.p [ Attributes.class "text-xl mt-2 mb-3" ]
