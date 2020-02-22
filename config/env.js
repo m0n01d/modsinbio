@@ -78,7 +78,7 @@ function getClientEnvironment(publicUrl) {
             ? 'http://localhost:8080'
             : process.env.NOW_GITHUB_COMMIT_REF == 'master'
             ? 'https://TODO-ROUTE-TO-DIGITAL-OCEAN'
-            : 'https://mods-dev.herokuapp.com/',
+            : 'https://mods-dev.herokuapp.com',
       }
     );
   // Stringify all values so we can feed into Webpack DefinePlugin
