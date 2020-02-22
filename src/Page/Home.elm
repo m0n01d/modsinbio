@@ -144,7 +144,7 @@ view model =
             , Html.div [ Attributes.class "md:flex pt-8" ]
                 [ Html.div [ Attributes.class "flex-1 hidden md:block" ]
                     [ Html.div
-                        [ Attributes.class "border-2 border-black mx-auto rounded-sm"
+                        [ Attributes.class "border-2 border-black mx-auto rounded-sm overflow-scroll"
                         , Attributes.style "width" "320px"
                         , Attributes.style "height" "529px"
                         ]
