@@ -14,13 +14,14 @@ import Json.Decode as Decode
 import Network.Api as Api
 import Network.Link as Link
 import Network.User as User
+import RemoteData exposing (RemoteData(..), WebData)
 import Task
 
 
 page : Model -> { title : String, content : Html Msg }
 page model =
     case model.profile of
-        Just { profile, mods } ->
+        Success { profile, mods } ->
             let
                 content =
                     Dict.toList mods
@@ -33,9 +34,16 @@ page model =
             , content = content
             }
 
-        Nothing ->
+        Loading ->
+            { title = "@username", content = loadingState }
+
+        _ ->
             -- @TODO error handling
             { title = "err", content = Html.text "woop" }
+
+
+loadingState =
+    Html.text "loading"
 
 
 view : DriverProfile -> List Category -> Html Msg
@@ -182,7 +190,7 @@ viewPreviewLink { title, description, urlString, id } =
 
 type Msg
     = NoOp
-    | GotProfile (Result Api.Error User.PublicProfile)
+    | GotProfile (RemoteData Api.Error User.PublicProfile)
     | LinkClicked Link.Id
     | LinkClickedResponse (Result Api.Error ())
     | IncrementedView (Result Http.Error ())
@@ -190,15 +198,16 @@ type Msg
 
 type alias Model =
     { session : Session.Session
-    , profile : Maybe User.PublicProfile
+    , profile : WebData User.PublicProfile
     }
 
 
 init : Session.Session -> String -> ( Model, Cmd Msg )
 init session username =
-    ( { session = session, profile = Nothing }
+    ( { session = session, profile = Loading }
     , User.profileQuery username
-        |> Task.attempt GotProfile
+        |> RemoteData.fromTask
+        |> Task.perform GotProfile
     )
 
 
@@ -208,12 +217,12 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-        GotProfile (Ok profile) ->
-            ( { model | profile = Just profile }
+        GotProfile (Success profile) ->
+            ( { model | profile = Success profile }
             , User.incrementViewCount profile.profile IncrementedView
             )
 
-        GotProfile (Err err) ->
+        GotProfile _ ->
             ( model, Cmd.none )
 
         LinkClicked id ->

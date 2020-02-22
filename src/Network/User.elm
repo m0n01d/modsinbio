@@ -7,6 +7,7 @@ import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Json.Encode.Extra as Encode
 import Network.Api as Api
+import Task exposing (Task)
 import Url.Builder
 
 
@@ -98,6 +99,7 @@ profileDecoder_ =
         |> Decode.required "users" (Decode.index 0 User.decodePublicProfile)
 
 
+profileQuery : String -> Task Api.Error User.PublicProfile
 profileQuery username =
     let
         vars =
