@@ -22,14 +22,15 @@ page model =
     case model.profile of
         Just { profile, mods } ->
             let
-                mods_ =
+                content =
                     Dict.toList mods
                         |> List.map Tuple.second
                         |> List.filter (.links >> List.isEmpty >> not)
                         |> List.sortBy .order
+                        |> view profile
             in
             { title = profile.username |> Maybe.withDefault "-"
-            , content = view mods_ profile
+            , content = content
             }
 
         Nothing ->
@@ -37,13 +38,13 @@ page model =
             { title = "err", content = Html.text "woop" }
 
 
-view : List Category -> DriverProfile -> Html Msg
-view mods profile =
+view : DriverProfile -> List Category -> Html Msg
+view profile mods =
     Html.div
-        [ Attributes.class "max-h-screen  overflow-y-scroll"
+        [ Attributes.class "pb-8"
         ]
         [ Html.div
-            [ Attributes.class "  rounded max-w-full max-w-full "
+            [ Attributes.class "rounded max-w-full max-w-full "
             ]
             [ Html.div [ Attributes.class "bg-white" ]
                 [ Html.div []

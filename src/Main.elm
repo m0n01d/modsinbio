@@ -226,7 +226,7 @@ view model =
     in
     { title = title
     , body =
-        [ div [ Attributes.class "container mx-auto root flex flex-col" ]
+        [ div [ Attributes.class "container mx-auto root flex flex-col min-h-screen" ]
             [ navbar model
             , Html.main_ [ Attributes.class "flex-1" ] [ content ]
             ]

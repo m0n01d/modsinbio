@@ -229,12 +229,10 @@ view model =
                             , Attributes.style "width" "320px"
                             , Attributes.style "height" "529px"
                             ]
-                            [ Profile.view
-                                (List.filter
-                                    (.links >> List.isEmpty >> not)
-                                    mods
-                                )
-                                profile
+                            [ List.filter
+                                (.links >> List.isEmpty >> not)
+                                mods
+                                |> Profile.view profile
                                 |> Html.map ProfileMsg
                             ]
 

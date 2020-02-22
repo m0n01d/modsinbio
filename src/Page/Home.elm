@@ -96,7 +96,7 @@ saveEmail email =
 
 view : Model -> Html Msg
 view model =
-    Html.div []
+    Html.div [ Attributes.class "px-4" ]
         [ Html.div
             [ Attributes.class "text-center mx-auto text-center md:min-h-screen  flex flex-col justify-center"
             ]
@@ -132,7 +132,7 @@ view model =
                 ]
             ]
         , Html.div
-            [ Attributes.class "md:w-4/5 mx-auto  px-4 pt-12 pb-8"
+            [ Attributes.class "md:w-4/5 mx-auto  pt-12 pb-8"
             ]
             [ Html.div [ Attributes.class "text-center mb-12" ]
                 [ Html.h2 [ Attributes.class "text-2xl" ]
@@ -150,14 +150,11 @@ view model =
                         ]
                         [ case model.profile of
                             Just { profile, mods } ->
-                                let
-                                    mods_ =
-                                        Dict.toList mods
-                                            |> List.map Tuple.second
-                                            |> List.filter (.links >> List.isEmpty >> not)
-                                            |> List.sortBy .order
-                                in
-                                Profile.view mods_ profile
+                                Dict.toList mods
+                                    |> List.map Tuple.second
+                                    |> List.filter (.links >> List.isEmpty >> not)
+                                    |> List.sortBy .order
+                                    |> Profile.view profile
                                     |> Html.map ProfileMsg
 
                             Nothing ->
