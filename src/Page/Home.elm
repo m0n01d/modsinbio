@@ -195,7 +195,7 @@ view model =
                             ]
                         ]
                     , Html.p []
-                        [ Html.text "Make it easy to find which parts and accessories youinstalled."
+                        [ Html.text "Make it easy to find which parts and accessories you installed."
                         ]
                     , Html.p [] [ Html.text "Track views and link clicks." ]
                     , Html.p [] [ Html.text "Know which mods are most popular." ]
