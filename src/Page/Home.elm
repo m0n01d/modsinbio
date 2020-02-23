@@ -184,12 +184,19 @@ view model =
                     , Html.p []
                         [ Html.text "Share your mods by adding the link to your instagram profile."
                         , Html.p
-                            [ Attributes.class "font-monospace"
+                            [ Attributes.class "font-monospace text-lg "
                             , Attributes.style "font-family" "monospace"
                             ]
-                            [ Html.text "https://modsinbio.com/[your_instagram]" ]
+                            [ Html.a
+                                [ Attributes.class "inline-block py-2 underline text-blue-500"
+                                , Route.href <| Route.Profile "dwrxht"
+                                ]
+                                [ Html.text "https://modsinbio.com/dwrhxt" ]
+                            ]
                         ]
-                    , Html.p [] [ Html.text "Please your fans by making it easy to find which parts and accessories are installed." ]
+                    , Html.p []
+                        [ Html.text "Make it easy to find which parts and accessories youinstalled."
+                        ]
                     , Html.p [] [ Html.text "Track views and link clicks." ]
                     , Html.p [] [ Html.text "Know which mods are most popular." ]
                     , Html.p [] [ Html.text "Who knows, maybe you'll even find a sponsor." ]
