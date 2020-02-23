@@ -182,7 +182,7 @@ view model =
                     , Html.p [] [ Html.text "Sign up now for free." ]
                     , Html.p [] [ Html.text "Add links to your car's mods." ]
                     , Html.p []
-                        [ Html.text "Share your mods by adding the link to your instagram profile."
+                        [ Html.text "Share your mods by adding the link to your instagram's bio."
                         , Html.p
                             [ Attributes.class "font-monospace text-lg "
                             , Attributes.style "font-family" "monospace"
