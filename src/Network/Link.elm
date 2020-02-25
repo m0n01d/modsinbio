@@ -1,11 +1,13 @@
-module Network.Link exposing (..)
+module Network.Link exposing (clickedMutation)
 
-import Data.Link as Link exposing (..)
+import Data.Link as Link
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Network.Api as Api
+import Task exposing (Task)
 
 
+addLink : String
 addLink =
     """
 mutation LinkClicked($id:uuid!) {
@@ -18,6 +20,7 @@ mutation LinkClicked($id:uuid!) {
 """
 
 
+clickedMutation : Link.Id -> Task Api.Error ()
 clickedMutation id =
     let
         vars =
