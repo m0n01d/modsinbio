@@ -107,7 +107,7 @@ mutation InsertLink($objects: [links_insert_input!]!) {
 
 updateIsActive =
     """
-mutation UpdateIsActive($id:Int!, $is_active:Boolean!) {
+mutation UpdateIsActive($id:uuid!, $is_active:Boolean!) {
   __typename
   update_links(_set:{active : $is_active} where: {id: {_eq: $id}}) {
     returning {
@@ -121,7 +121,7 @@ mutation UpdateIsActive($id:Int!, $is_active:Boolean!) {
 
 deleteLink =
     """
-mutation DeleteLInk($id: Int) {
+mutation DeleteLInk($id:uuid!) {
   __typename
   update_links(_set:{soft_delete: true} where: {id: {_eq: $id}}) {
     returning {

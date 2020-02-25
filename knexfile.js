@@ -1,11 +1,19 @@
-// @TODO
-
 const databaseName = 'postgres';
 const pg = require('pg');
 
+const {
+  NOW_GITHUB_COMMIT_REF,
+  DATABASE_URL,
+  PROD_DATABASE_URL,
+  APP_ENV,
+} = process.env;
+
 const connection_url =
-  process.env.DATABASE_URL ||
-  `postgres://postgres:@postgres:5432/${databaseName}`;
+  APP_ENV == 'development'
+    ? DATABASE_URL // LOCALHOST
+    : NOW_GITHUB_COMMIT_REF == 'master'
+    ? PROD_DATABASE_URL // DIGITAL_OCEAN -- @TODO
+    : DATABASE_URL; // HEROKU
 
 module.exports = {
   client: 'pg',

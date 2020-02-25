@@ -1,0 +1,345 @@
+- args:
+    allowlist: []
+    functions: []
+    query_collections: []
+    remote_schemas: []
+    tables:
+    - array_relationships:
+      - comment: null
+        name: links
+        using:
+          foreign_key_constraint_on:
+            column: category_id
+            table: links
+      computed_fields: []
+      configuration:
+        custom_column_names: {}
+        custom_root_fields:
+          delete: null
+          insert: null
+          select: null
+          select_aggregate: null
+          select_by_pk: null
+          update: null
+      delete_permissions: []
+      event_triggers: []
+      insert_permissions:
+      - comment: null
+        permission:
+          check:
+            owner:
+              _eq: X-Hasura-User-Id
+          columns:
+          - name
+          - order
+          - owner
+          set: {}
+        role: driver
+      is_enum: false
+      object_relationships:
+      - comment: null
+        name: user
+        using:
+          foreign_key_constraint_on: owner
+      select_permissions:
+      - comment: null
+        permission:
+          allow_aggregations: false
+          columns:
+          - soft_delete
+          - order
+          - name
+          - created_at
+          - id
+          - owner
+          computed_fields: []
+          filter:
+            owner:
+              _eq: X-Hasura-User-Id
+        role: driver
+      - comment: null
+        permission:
+          allow_aggregations: false
+          columns:
+          - name
+          - id
+          - created_at
+          - order
+          - owner
+          - soft_delete
+          computed_fields: []
+          filter: {}
+        role: public
+      table: categories
+      update_permissions:
+      - comment: null
+        permission:
+          columns:
+          - name
+          - order
+          - soft_delete
+          filter:
+            owner:
+              _eq: X-Hasura-User-Id
+          set: {}
+        role: driver
+    - array_relationships: []
+      computed_fields: []
+      configuration:
+        custom_column_names: {}
+        custom_root_fields:
+          delete: null
+          insert: null
+          select: null
+          select_aggregate: null
+          select_by_pk: null
+          update: null
+      delete_permissions: []
+      event_triggers: []
+      insert_permissions:
+      - comment: null
+        permission:
+          check: {}
+          columns:
+          - link
+          set: {}
+        role: public
+      is_enum: false
+      object_relationships:
+      - comment: null
+        name: linkByLink
+        using:
+          foreign_key_constraint_on: link
+      select_permissions:
+      - comment: null
+        permission:
+          allow_aggregations: false
+          columns:
+          - created_at
+          - id
+          - link
+          computed_fields: []
+          filter:
+            linkByLink:
+              category:
+                owner:
+                  _eq: X-Hasura-User-Id
+        role: driver
+      table: link_clicks
+      update_permissions: []
+    - array_relationships:
+      - comment: null
+        name: link_clicks
+        using:
+          foreign_key_constraint_on:
+            column: link
+            table: link_clicks
+      computed_fields: []
+      configuration:
+        custom_column_names: {}
+        custom_root_fields:
+          delete: null
+          insert: null
+          select: null
+          select_aggregate: null
+          select_by_pk: null
+          update: null
+      delete_permissions: []
+      event_triggers: []
+      insert_permissions:
+      - comment: null
+        permission:
+          check:
+            category:
+              owner:
+                _eq: X-Hasura-User-Id
+          columns:
+          - active
+          - category_id
+          - description
+          - fragment
+          - host
+          - path
+          - protocol
+          - query
+          - soft_delete
+          - title
+          - urlString
+          set: {}
+        role: driver
+      is_enum: false
+      object_relationships:
+      - comment: null
+        name: category
+        using:
+          foreign_key_constraint_on: category_id
+      select_permissions:
+      - comment: null
+        permission:
+          allow_aggregations: false
+          columns:
+          - active
+          - soft_delete
+          - description
+          - fragment
+          - host
+          - path
+          - protocol
+          - query
+          - title
+          - urlString
+          - created_at
+          - category_id
+          - id
+          computed_fields: []
+          filter:
+            category:
+              owner:
+                _eq: X-Hasura-User-Id
+        role: driver
+      - comment: null
+        permission:
+          allow_aggregations: false
+          columns:
+          - active
+          - category_id
+          - description
+          - id
+          - soft_delete
+          - title
+          - urlString
+          computed_fields: []
+          filter: {}
+        role: public
+      table: links
+      update_permissions:
+      - comment: null
+        permission:
+          columns:
+          - active
+          - soft_delete
+          filter:
+            category:
+              owner:
+                _eq: X-Hasura-User-Id
+          set: {}
+        role: driver
+    - array_relationships:
+      - comment: null
+        name: roles
+        using:
+          foreign_key_constraint_on:
+            column: role_id
+            table: user_role
+      computed_fields: []
+      configuration:
+        custom_column_names: {}
+        custom_root_fields:
+          delete: null
+          insert: null
+          select: null
+          select_aggregate: null
+          select_by_pk: null
+          update: null
+      delete_permissions: []
+      event_triggers: []
+      insert_permissions: []
+      is_enum: false
+      object_relationships: []
+      select_permissions: []
+      table: role
+      update_permissions: []
+    - array_relationships: []
+      computed_fields: []
+      configuration:
+        custom_column_names: {}
+        custom_root_fields:
+          delete: null
+          insert: null
+          select: null
+          select_aggregate: null
+          select_by_pk: null
+          update: null
+      delete_permissions: []
+      event_triggers: []
+      insert_permissions: []
+      is_enum: false
+      object_relationships:
+      - comment: null
+        name: role
+        using:
+          foreign_key_constraint_on: role_id
+      - comment: null
+        name: user
+        using:
+          foreign_key_constraint_on: user_id
+      select_permissions: []
+      table: user_role
+      update_permissions: []
+    - array_relationships:
+      - comment: null
+        name: categories
+        using:
+          foreign_key_constraint_on:
+            column: owner
+            table: categories
+      - comment: null
+        name: roles
+        using:
+          foreign_key_constraint_on:
+            column: user_id
+            table: user_role
+      computed_fields: []
+      configuration:
+        custom_column_names: {}
+        custom_root_fields:
+          delete: null
+          insert: null
+          select: null
+          select_aggregate: null
+          select_by_pk: null
+          update: null
+      delete_permissions: []
+      event_triggers: []
+      insert_permissions: []
+      is_enum: false
+      object_relationships: []
+      select_permissions:
+      - comment: null
+        permission:
+          allow_aggregations: false
+          columns:
+          - created
+          - email
+          - id
+          - profile
+          - username
+          - views
+          computed_fields: []
+          filter:
+            id:
+              _eq: X-Hasura-User-Id
+        role: driver
+      - comment: null
+        permission:
+          allow_aggregations: false
+          columns:
+          - id
+          - profile
+          - username
+          computed_fields: []
+          filter: {}
+        role: public
+      table: users
+      update_permissions:
+      - comment: null
+        permission:
+          columns:
+          - profile
+          filter:
+            id:
+              _eq: X-Hasura-User-Id
+          set: {}
+        role: driver
+    version: 2
+  type: replace_metadata

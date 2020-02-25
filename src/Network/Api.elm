@@ -5,11 +5,12 @@ import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 import Set
+import Task exposing (Task)
 import Url.Builder as Builder
 
 
 apiUrl =
-    "http://localhost:8080"
+    "%API_URL%"
 
 
 type Fragment
@@ -38,6 +39,7 @@ document operation fragments =
     Document operation (flatten fragments)
 
 
+queryTask : List Http.Header -> Http.Body -> Decoder a -> Task Error a
 queryTask headers body decoder =
     Http.task
         { method = "POST"
@@ -64,7 +66,7 @@ jsonResolver decoder =
             case response of
                 Http.GoodStatus_ _ body ->
                     Decode.decodeString (Decode.field "data" decoder) body
-                        |> Debug.log "now what"
+                        -- |> Debug.log "now what"
                         |> Result.mapError resultErrorToChangeset
 
                 _ ->

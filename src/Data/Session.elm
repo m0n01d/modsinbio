@@ -2,6 +2,8 @@ port module Data.Session exposing (Session, navKey, saveUser)
 
 import Browser.Navigation as Nav
 import Data.User as User exposing (User)
+import Json.Decode as Decode
+import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 
 

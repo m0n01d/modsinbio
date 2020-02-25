@@ -18,7 +18,6 @@ const publicPath = '/';
 const publicUrl = '';
 // Get environment variables to inject into our app.
 const env = getClientEnvironment(publicUrl);
-
 // This is the development configuration.
 // It is focused on developer experience and fast rebuilds.
 // The production configuration is different and lives in a separate file.
@@ -161,10 +160,19 @@ module.exports = {
           // module system.
           {
             loader: require.resolve('string-replace-loader'),
-            query: {
-              search: '%PUBLIC_URL%',
-              replace: publicUrl,
-              flags: 'g',
+            options: {
+              multiple: [
+                {
+                  search: '%PUBLIC_URL%',
+                  replace: publicUrl,
+                  flags: 'g',
+                },
+                {
+                  search: '%API_URL%',
+                  replace: env.raw.API_URL,
+                  flags: 'g',
+                },
+              ],
             },
           },
           {

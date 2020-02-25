@@ -35,12 +35,17 @@ function auth(req, res) {
       .then(loginUser)
       .then(user => {
         const tokenized = user.getJwt();
-        const url = 'http://localhost:3000';
+        const url =
+          process.env.NODE_ENV == 'production'
+            ? `https://${req.headers.host}`
+            : 'http://localhost:3000';
+        console.log(req.headers, url);
         return redirect(res, `${url}/app/authed?token=${tokenized}`);
 
         // return res.status(200).json(user.getUser());
       })
       .catch(e => {
+        console.log(e);
         res.send(500);
       });
   }
@@ -91,7 +96,7 @@ function queryUser({ username }, done) {
 
 function createUser({ username, instagram_id }, done) {
   return User.query()
-    .insert({ username, instagram_id, bio: '' })
+    .insert({ username, instagram_id })
     .then(done);
 }
 /*

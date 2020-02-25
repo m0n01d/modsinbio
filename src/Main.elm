@@ -6,8 +6,9 @@ import Data.Session as Session
 import Data.User as User
 import Html exposing (Html, div, h1, img, text)
 import Html.Attributes as Attributes exposing (src)
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Value)
 import Json.Decode.Extra as Decode
+import Json.Decode.Pipeline as Decode
 import Network.Api as Api
 import Page.Authed as Authed
 import Page.Home as Home
@@ -34,19 +35,43 @@ type Model
     | Profile Profile.Model
 
 
+type alias DecodedFlags =
+    { user : User.User
+    }
+
+
 type alias Flags =
-    Decode.Value
+    Value
 
 
-decodeFlags str =
-    Decode.decodeValue User.decodeDriver str
-        |> Result.withDefault User.Public
+decoder =
+    Decode.succeed DecodedFlags
+        |> Decode.required "user" User.decodeDriver
+
+
+decodeFlags : Flags -> Result Decode.Error DecodedFlags
+decodeFlags flags =
+    Decode.decodeValue decoder flags
 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    Redirect { key = key, user = decodeFlags flags }
-        |> changeRouteTo (Route.fromUrl url)
+    let
+        decoded =
+            decodeFlags flags
+    in
+    case decoded of
+        Ok { user } ->
+            Redirect { key = key, user = user }
+                |> changeRouteTo (Route.fromUrl url)
+
+        Err e ->
+            -- let
+            --     _ =
+            --         Debug.log "why" e
+            -- in
+            Redirect { key = key, user = User.Public }
+                |> changeRouteTo (Route.fromUrl url)
 
 
 
@@ -150,10 +175,13 @@ changeRouteTo maybeRoute model =
                 |> Tuple.mapSecond (Cmd.map ProfileMsg)
 
         ( Just Route.Home, _ ) ->
-            ( Home { session = session }, Cmd.none )
+            Home.init session "dwrxht"
+                |> Tuple.mapFirst Home
+                |> Tuple.mapSecond (Cmd.map HomeMsg)
 
         ( Nothing, _ ) ->
-            ( Home { session = session }, Cmd.none )
+            -- todo
+            ( Home <| Home.initialModel session, Cmd.none )
 
         ( Just Route.Login, _ ) ->
             ( Login { session = session }, Cmd.none )
@@ -170,15 +198,20 @@ changeRouteTo maybeRoute model =
                     ( model, Cmd.none )
 
         ( _, User.Public ) ->
-            ( Home { session = session }, Nav.replaceUrl session.key (Route.routeToString Route.Home) )
+            ( Home <| Home.initialModel session, Nav.replaceUrl session.key (Route.routeToString Route.Home) )
 
         ( Just Route.Settings, _ ) ->
             ( Settings { session = session }, Cmd.none )
 
         ( Just Route.Admin, _ ) ->
-            MyMods.update MyMods.InitializeMyMods (MyMods.initialModel session)
-                |> Tuple.mapFirst MyMods
-                |> Tuple.mapSecond (Cmd.map MyModsMsg)
+            case session.user of
+                User.Driver token profile ->
+                    MyMods.update MyMods.InitializeMyMods (MyMods.initialModel session profile)
+                        |> Tuple.mapFirst MyMods
+                        |> Tuple.mapSecond (Cmd.map MyModsMsg)
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 
@@ -193,25 +226,34 @@ view model =
     in
     { title = title
     , body =
-        [ div [ Attributes.class "container mx-auto" ]
+        [ div [ Attributes.class "container mx-auto root flex flex-col min-h-screen" ]
             [ navbar model
-            , Html.main_ [ Attributes.class "md:pt-12 px-2" ] [ content ]
+            , Html.main_ [ Attributes.class "flex-1" ] [ content ]
             ]
         ]
     }
 
 
 navbar model =
-    Html.header [ Attributes.class "h-6 py-8 px-2 border-b border-grey-500 flex items-center" ]
-        [ Html.text "Navbar"
-        ]
+    case model of
+        Profile _ ->
+            Html.text ""
+
+        _ ->
+            Html.header [ Attributes.class "h-6 py-8 px-4 border-b border-grey-500 flex items-center" ]
+                [ Html.a [ Route.href Route.Home ] [ Html.text "Mods in Bio" ]
+                ]
 
 
 viewContent : Model -> { title : String, content : Html Msg }
 viewContent model =
     case model of
         Home m ->
-            { title = "Mods in Bio", content = Home.view }
+            { title = "Mods in Bio"
+            , content =
+                Home.view m
+                    |> Html.map HomeMsg
+            }
 
         MyMods subModel ->
             { title = " My Mods - Mods in Bio"

@@ -5,8 +5,16 @@ require('./Elements/Openable')();
 require('./Elements/LinkClick')();
 // import * as serviceWorker from './serviceWorker';
 
+const hostname = window.location.hostname;
+
 const flags = {
-  payload: localStorage.user ? JSON.parse(localStorage.user) : null,
+  user: localStorage.user ? JSON.parse(localStorage.user) : null,
+  env:
+    hostname == 'modsinbio.com'
+      ? 'PROD'
+      : hostname == 'localhost'
+      ? 'DEV'
+      : 'STAGING',
 };
 
 const app = Elm.Main.init({

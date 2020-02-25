@@ -85,7 +85,7 @@ class User extends Model {
   static get jsonSchema() {
     return {
       type: 'object',
-      required: ['username', 'instagram_id'],
+      required: ['email'],
       properties: {
         id: { type: 'uuid' },
         username: { type: 'string' },

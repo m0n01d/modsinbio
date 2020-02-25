@@ -31,14 +31,14 @@ decodeDriverPartial =
 
 decodeDriver =
     Decode.succeed Driver
-        |> Decode.requiredAt [ "payload", "token" ] Decode.string
-        |> Decode.requiredAt [ "payload", "user" ] decodeDriverProfile
+        |> Decode.requiredAt [ "token" ] Decode.string
+        |> Decode.requiredAt [ "user" ] decodeDriverProfile
 
 
 decodeDriverProfile =
     Decode.succeed DriverProfile
         |> Decode.required "id" (Decode.map UserId Decode.string)
-        |> Decode.required "username" Decode.string
+        |> Decode.custom (Decode.field "username" (Decode.nullable Decode.string))
         |> Decode.custom (Decode.field "profile" (Decode.nullable decodeProfileData))
         |> Decode.optional "views" Decode.int 0
 
@@ -67,9 +67,13 @@ idToString (UserId identifier) =
     identifier
 
 
+stringToId userId =
+    UserId userId
+
+
 type alias DriverProfile =
     { id : UserId
-    , username : String
+    , username : Maybe String
     , profile : Maybe Profile
     , views : Int
     }
@@ -112,7 +116,7 @@ encodeDriverProfile : DriverProfile -> Value
 encodeDriverProfile { id, username, profile } =
     Encode.object
         [ ( "id", Encode.string <| idToString id )
-        , ( "username", Encode.string username )
+        , ( "username", Encode.maybe Encode.string username )
         , ( "profile", Encode.maybe encodeProfile profile )
         ]
 

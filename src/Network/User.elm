@@ -5,7 +5,9 @@ import Http
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
+import Json.Encode.Extra as Encode
 import Network.Api as Api
+import Task exposing (Task)
 import Url.Builder
 
 
@@ -54,9 +56,9 @@ query FetchProfile($profile:String!) {
 
 updateProfile =
     """
-mutation UpdateProfile($id:uuid!,$profile: jsonb) {
+mutation UpdateProfile($id:uuid!,$profile: jsonb, $username:String) {
   __typename
-  update_users(_set: {profile: $profile}, where: {id: {_eq: $id}}) {
+  update_users(_set: {profile: $profile, username : $username}, where: {id: {_eq: $id}}) {
     returning {
       id
     }
@@ -97,6 +99,7 @@ profileDecoder_ =
         |> Decode.required "users" (Decode.index 0 User.decodePublicProfile)
 
 
+profileQuery : String -> Task Api.Error User.PublicProfile
 profileQuery username =
     let
         vars =
@@ -106,15 +109,15 @@ profileQuery username =
     Api.unauthedQuery (Api.document fetchProfile []) vars profileDecoder_
 
 
-updateUserMutation token id profile =
+updateUserMutation token id profile username =
     let
-        -- {"id":"fd1f55d0-b14f-4ccc-8821-4cbf5f0710a6", "profile": {"bio":"it dwit"}}
         vars =
             Encode.object
                 [ ( "id"
                   , Encode.string (User.idToString id)
                   )
                 , ( "profile", User.encodeProfile profile )
+                , ( "username", Encode.maybe Encode.string username )
                 ]
                 |> Just
     in

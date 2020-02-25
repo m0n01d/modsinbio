@@ -3,7 +3,7 @@ module Page.MyMods exposing (..)
 import Data.Category as Category exposing (Category, CategoryId)
 import Data.Link as Link exposing (Link, MorePanel(..))
 import Data.Session as Session exposing (Session)
-import Data.User as User exposing (User)
+import Data.User as User exposing (DriverProfile, User)
 import Data.Vehicle as Vehicle
 import Dict exposing (Dict)
 import File
@@ -20,6 +20,7 @@ import Network.Api as Api
 import Network.Scraper as Scraper
 import Network.SignedUrl as SignedUrl
 import Network.User as User
+import Network.Util as Util
 import Network.Vehicle as Vehicle
 import Page.Profile as Profile
 import Process
@@ -46,6 +47,10 @@ import Url
 -- research linktrees analytics offerings
 -- todo custom element for public profiles's avatar
 --- on error load placeholder?
+-- consider adding updated_at to bust cache
+-- @todo cascading deletes
+-- double check permissions
+-- hosting
 
 
 type alias Model =
@@ -58,6 +63,7 @@ type alias Model =
     , profile : User.Profile
     , maybeNewAvatar : Maybe String
     , maybeAvatarFile : Maybe File.File
+    , maybeNewUsername : Maybe String
     }
 
 
@@ -72,8 +78,8 @@ type alias Mods =
     Dict CategoryId Category
 
 
-initialModel : Session -> Model
-initialModel session =
+initialModel : Session -> DriverProfile -> Model
+initialModel session profile =
     { session = session
     , mods = Dict.fromList []
     , isNewCategoryFormVisible = False
@@ -88,6 +94,7 @@ initialModel session =
         }
     , maybeNewAvatar = Nothing
     , maybeAvatarFile = Nothing
+    , maybeNewUsername = profile.username
     }
 
 
@@ -109,7 +116,7 @@ view model =
                 [ Html.div [ Attributes.class "mt-4 md:px-8 pb-8" ]
                     [ case session.user of
                         User.Driver _ profile ->
-                            viewMyBio model profile
+                            viewMyBio model.maybeNewUsername model profile
 
                         _ ->
                             Html.nothing
@@ -214,15 +221,18 @@ view model =
                             ]
                     ]
                 ]
-            , Html.div [ Attributes.class "flex-1 hidden sm:block" ]
+            , Html.div [ Attributes.class "flex-1 hidden sm:block pt-12" ]
                 [ case session.user of
                     User.Driver _ profile ->
                         Html.div
-                            [ Attributes.class "border-2 border-black px-1 mx-auto"
+                            [ Attributes.class "border-2 border-black mx-auto rounded-sm"
                             , Attributes.style "width" "320px"
                             , Attributes.style "height" "529px"
                             ]
-                            [ Profile.view (List.filter (.links >> List.isEmpty >> not) mods) profile
+                            [ List.filter
+                                (.links >> List.isEmpty >> not)
+                                mods
+                                |> Profile.view profile
                                 |> Html.map ProfileMsg
                             ]
 
@@ -237,7 +247,7 @@ view model =
 -- viewMyBio : User.Profile -> Html Msg
 
 
-viewMyBio { profile, maybeNewAvatar } driverProfile =
+viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
     Html.div [ Attributes.class "w-full md:w-1/x2 md:mb-8" ]
         [ Html.p [ Attributes.class "font-semibold text-center" ]
             [ Html.text "My car:"
@@ -249,6 +259,7 @@ viewMyBio { profile, maybeNewAvatar } driverProfile =
                     ]
                 , Html.button
                     [ Attributes.class "ml-2 px-4 py-2 font-medium text-center rounded-sm border block w-32 mb-1"
+                    , Attributes.classList [ ( "hidden", maybeNewAvatar /= Nothing ) ]
                     , Events.onClick AskForAvatarFile
                     ]
                     [ Html.text "Select image" ]
@@ -266,24 +277,40 @@ viewMyBio { profile, maybeNewAvatar } driverProfile =
                             [ Html.text "Cancel" ]
                         ]
                 ]
-            , case maybeNewAvatar of
-                Just avatar ->
-                    Html.img [ Attributes.class "w-32 mx-auto", Attributes.src avatar ] []
+            , Html.img
+                [ Attributes.class "w-32 mx-auto"
+                , case maybeNewAvatar of
+                    Just avatar ->
+                        Attributes.src avatar
 
-                Nothing ->
-                    Html.img
-                        [ Attributes.class "w-32 mx-auto"
-                        , Attributes.src <|
+                    Nothing ->
+                        Attributes.src <|
                             String.concat
                                 [ "https://dev-mods-in-bio.s3.amazonaws.com/"
                                 , User.idToString driverProfile.id
                                 ]
-                        ]
-                        []
+                ]
+                []
             ]
         , Html.form [ Events.onSubmit SaveMyProfile ]
             [ Html.div [ Attributes.class "mb-2" ]
-                [ Html.label [ Attributes.class "mr-1 block font-medium mb-1" ] [ Html.text "Year" ]
+                [ Html.label [ Attributes.class "mr-1 block font-medium mb-1" ]
+                    [ Html.text "Username" ]
+                , Html.input
+                    [ Attributes.class "border rounded-sm block w-full px-2 py-1"
+                    , Attributes.placeholder "@yourinsta"
+
+                    -- , Events.onFocus FetchVehicleMakes
+                    , Events.onInput SetUsername
+                    , maybeNewUsername
+                        |> Maybe.map Attributes.value
+                        |> Maybe.withDefault (Attributes.value "")
+                    ]
+                    []
+                ]
+            , Html.div [ Attributes.class "mb-2" ]
+                [ Html.label [ Attributes.class "mr-1 block font-medium mb-1" ]
+                    [ Html.text "Year" ]
                 , Html.input
                     [ Attributes.class "border rounded-sm block w-full px-2 py-1"
                     , Attributes.type_ "text"
@@ -544,6 +571,7 @@ type Msg
     | RemoveNewAvatar
     | SaveNewAvatar
     | SaveNewAvatarResponse (Result Http.Error String)
+    | SetUsername String
     | NoOp
 
 
@@ -1066,12 +1094,11 @@ update msg model =
             let
                 profile =
                     model.profile
-                        |> Debug.log "saving"
             in
             ( model
             , case session.user of
                 User.Driver token p ->
-                    User.updateUserMutation token p.id profile
+                    User.updateUserMutation token p.id profile model.maybeNewUsername
                         |> Task.attempt (SaveMyProfileResponse profile)
 
                 _ ->
@@ -1083,7 +1110,7 @@ update msg model =
                 ( u, cmd ) =
                     case session.user of
                         User.Driver token p ->
-                            ( User.Driver token { p | profile = Just profile }
+                            ( User.Driver token { p | profile = Just profile, username = model.maybeNewUsername }
                             , Session.saveUser token { p | profile = Just profile }
                             )
 
@@ -1111,10 +1138,7 @@ update msg model =
             ( { model | maybeNewAvatar = Just str }, Cmd.none )
 
         AvatarImageBase64 (Err str) ->
-            let
-                _ =
-                    Debug.log "why" str
-            in
+            -- @todo
             ( model, Cmd.none )
 
         RemoveNewAvatar ->
@@ -1146,6 +1170,13 @@ update msg model =
         SaveNewAvatarResponse (Err _) ->
             -- @todo
             ( model, Cmd.none )
+
+        SetUsername s ->
+            if String.trim s /= "" then
+                ( { model | maybeNewUsername = Just s }, Cmd.none )
+
+            else
+                ( { model | maybeNewUsername = Nothing }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -1180,6 +1211,6 @@ uploadFile token { url, file } =
         , headers = [] --  (Api.authHeaders token)
         , url = url
         , body = Http.fileBody file
-        , resolver = Http.stringResolver SignedUrl.resolver
+        , resolver = Http.stringResolver Util.resolver
         , timeout = Nothing
         }
