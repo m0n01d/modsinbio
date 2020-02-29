@@ -2,35 +2,47 @@ module Data.User exposing (..)
 
 import Data.Category as Category exposing (Category, CategoryId)
 import Dict exposing (Dict)
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Json.Encode.Extra as Encode
 
 
 type User
-    = Public
-    | DriverPartial AccessToken
-    | Driver AccessToken DriverProfile
+    = Partial AccessToken
+    | Driver Driver
 
 
-driverPartialToFull : User -> DriverProfile -> User
-driverPartialToFull user profile =
+type Driver
+    = DriverFull AccessToken DriverProfile
+
+
+driverPartialToFull : DriverProfile -> User -> User
+driverPartialToFull driverProfile user =
     case user of
-        DriverPartial token ->
-            Driver token profile
+        Partial token ->
+            Driver <| DriverFull token driverProfile
 
         _ ->
             user
 
 
+decodeDriverPartial : Decoder User
 decodeDriverPartial =
-    Decode.succeed DriverPartial
+    Decode.succeed Partial
         |> Decode.required "token" Decode.string
 
 
-decodeDriver =
-    Decode.succeed Driver
+decoder : Decoder User
+decoder =
+    Decode.succeed identity
+        |> Decode.custom decodeDriver_
+        |> Decode.map Driver
+
+
+decodeDriver_ : Decoder Driver
+decodeDriver_ =
+    Decode.succeed DriverFull
         |> Decode.requiredAt [ "token" ] Decode.string
         |> Decode.requiredAt [ "user" ] decodeDriverProfile
 
@@ -49,14 +61,6 @@ decodeProfileData =
         |> Decode.optional "vehicleMake" Decode.string ""
         |> Decode.optional "vehicleModel" Decode.string ""
         |> Decode.optional "bio" Decode.string ""
-
-
-decoder =
-    Decode.oneOf [ decodeDriver, decodePublic ]
-
-
-decodePublic =
-    Decode.succeed Public
 
 
 type UserId
@@ -80,10 +84,10 @@ type alias DriverProfile =
 
 
 type alias Profile =
-    { vehicleYear : String
+    { bio : String
     , vehicleMake : String
     , vehicleModel : String
-    , bio : String
+    , vehicleYear : String
     }
 
 
