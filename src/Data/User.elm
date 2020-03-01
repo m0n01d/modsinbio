@@ -6,6 +6,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Json.Encode.Extra as Encode
+import Time exposing (Posix)
 
 
 type User
@@ -53,6 +54,7 @@ decodeDriverProfile =
         |> Decode.custom (Decode.field "username" (Decode.nullable Decode.string))
         |> Decode.custom (Decode.field "profile" (Decode.nullable decodeProfileData))
         |> Decode.optional "views" Decode.int 0
+        |> Decode.hardcoded (Time.millisToPosix 0)
 
 
 decodeProfileData : Decoder Profile
@@ -81,6 +83,7 @@ type alias DriverProfile =
     , username : Maybe String
     , profile : Maybe Profile
     , views : Int
+    , lastUpdated : Posix
     }
 
 

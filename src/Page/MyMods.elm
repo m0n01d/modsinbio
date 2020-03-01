@@ -26,6 +26,7 @@ import Page.Profile as Profile
 import Process
 import RemoteData exposing (RemoteData(..), WebData)
 import Task
+import Time exposing (Posix)
 import Url
 
 
@@ -295,6 +296,8 @@ viewMyBio { profileForm, driverProfile } =
                             String.concat
                                 [ "https://dev-mods-in-bio.s3.amazonaws.com/"
                                 , User.idToString driverProfile.id
+                                , "?last_updated="
+                                , String.fromInt <| Time.posixToMillis driverProfile.lastUpdated
                                 ]
                 ]
                 []
@@ -550,7 +553,7 @@ type Msg
     | AvatarImageBase64 (Result String String)
     | RemoveNewAvatar
     | SaveNewAvatar
-    | SaveNewAvatarResponse (Result Http.Error String)
+    | SaveNewAvatarResponse (Result Http.Error Posix)
     | SetUsername String
     | NoOp
 
@@ -1084,23 +1087,21 @@ update msg model =
             )
 
         AvatarImageBase64 (Ok str) ->
-            -- @todo
-            -- ( { model | maybeNewAvatar = Just str }, Cmd.none )
-            ( model, Cmd.none )
+            updateForm (\profileForm -> { profileForm | maybeNewAvatar = Just str }) model
 
         AvatarImageBase64 (Err str) ->
             -- @todo
             ( model, Cmd.none )
 
         RemoveNewAvatar ->
-            let
-                profileForm =
-                    model.profileForm
-
-                p =
-                    { profileForm | maybeNewAvatar = Nothing, maybeAvatarFile = Nothing }
-            in
-            ( { model | profileForm = p }, Cmd.none )
+            updateForm
+                (\profileForm ->
+                    { profileForm
+                        | maybeNewAvatar = Nothing
+                        , maybeAvatarFile = Nothing
+                    }
+                )
+                model
 
         SaveNewAvatar ->
             case model.profileForm.maybeAvatarFile of
@@ -1115,15 +1116,27 @@ update msg model =
                             (\url ->
                                 uploadFile accessToken { url = url, file = file }
                             )
+                        |> Task.andThen
+                            (\_ ->
+                                Time.now
+                            )
                         |> Task.attempt SaveNewAvatarResponse
                     )
 
                 Nothing ->
                     ( model, Cmd.none )
 
-        SaveNewAvatarResponse (Ok _) ->
-            -- @todo cache bust --
-            update RemoveNewAvatar model
+        SaveNewAvatarResponse (Ok now) ->
+            -- @todo cache bust with 'updated at' attr --
+            let
+                driverProfile =
+                    model.driverProfile
+
+                driverProfile_ =
+                    { driverProfile | lastUpdated = now }
+            in
+            update RemoveNewAvatar { model | driverProfile = driverProfile_ }
+                |> Debug.log "remove"
 
         SaveNewAvatarResponse (Err _) ->
             -- @todo
@@ -1152,6 +1165,10 @@ update msg model =
 
 updateCategory categoryId fn =
     Dict.update categoryId (Maybe.map fn)
+
+
+updateForm fn model =
+    ( { model | profileForm = fn model.profileForm }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
