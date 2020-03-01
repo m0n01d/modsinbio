@@ -82,18 +82,6 @@ query session token =
     Api.authedQuery token document Nothing decoder_
 
 
-sessionToken { user } =
-    case user of
-        Public ->
-            ""
-
-        DriverPartial token ->
-            token
-
-        Driver token _ ->
-            token
-
-
 profileDecoder_ =
     Decode.succeed identity
         |> Decode.required "users" (Decode.index 0 User.decodePublicProfile)

@@ -1,6 +1,16 @@
-module Data.Link exposing (..)
+module Data.Link exposing
+    ( Id
+    , Link
+    , MorePanel(..)
+    , decoder
+    , deleteLink
+    , encodeId
+    , encoder
+    , insert
+    , updateIsActive
+    )
 
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Json.Encode.Extra as Encode
@@ -35,17 +45,20 @@ type alias Link =
 -- decode
 
 
+decodeToMaybeUrl : Decoder (Maybe Url.Url)
 decodeToMaybeUrl =
     Decode.string
         |> Decode.map Url.fromString
 
 
+decodeId : Decoder Id
 decodeId =
     Decode.string
         |> Decode.map Id
 
 
-decode =
+decoder : Decoder Link
+decoder =
     Decode.succeed Link
         |> Decode.required "id" decodeId
         |> Decode.custom (Decode.field "urlString" decodeToMaybeUrl)
@@ -60,6 +73,7 @@ decode =
 -- encode
 
 
+protocolToString : Url.Protocol -> String
 protocolToString p =
     case p of
         Url.Https ->
@@ -69,7 +83,11 @@ protocolToString p =
             "http"
 
 
-encode { urlString, description, title, category_id, fragment, host, path, protocol, query } =
+
+-- encode : Link -> Value
+
+
+encoder { urlString, description, title, category_id, fragment, host, path, protocol, query } =
     Encode.object
         [ ( "urlString", Encode.string urlString )
         , ( "description", Encode.string description )
@@ -83,6 +101,7 @@ encode { urlString, description, title, category_id, fragment, host, path, proto
         ]
 
 
+encodeId : Id -> Value
 encodeId (Id identifier) =
     Encode.string identifier
 

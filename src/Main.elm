@@ -46,7 +46,7 @@ type alias Flags =
 
 decoder =
     Decode.succeed DecodedFlags
-        |> Decode.required "user" User.decodeDriver
+        |> Decode.required "user" User.decoder
 
 
 decodeFlags : Flags -> Result Decode.Error DecodedFlags
@@ -62,7 +62,7 @@ init flags url key =
     in
     case decoded of
         Ok { user } ->
-            Redirect { key = key, user = user }
+            Redirect { key = key, user = Just user }
                 |> changeRouteTo (Route.fromUrl url)
 
         Err e ->
@@ -70,7 +70,7 @@ init flags url key =
             --     _ =
             --         Debug.log "why" e
             -- in
-            Redirect { key = key, user = User.Public }
+            Redirect { key = key, user = Nothing }
                 |> changeRouteTo (Route.fromUrl url)
 
 
@@ -181,7 +181,7 @@ changeRouteTo maybeRoute model =
 
         ( Nothing, _ ) ->
             -- todo
-            ( Home <| Home.initialModel session, Cmd.none )
+            toHome session
 
         ( Just Route.Login, _ ) ->
             ( Login { session = session }, Cmd.none )
@@ -194,24 +194,37 @@ changeRouteTo maybeRoute model =
                         |> Tuple.mapSecond (Cmd.map AuthedMsg)
 
                 Nothing ->
-                    -- todo redirect home?
-                    ( model, Cmd.none )
+                    toHome session
 
-        ( _, User.Public ) ->
-            ( Home <| Home.initialModel session, Nav.replaceUrl session.key (Route.routeToString Route.Home) )
+        ( _, Nothing ) ->
+            toHome session
 
         ( Just Route.Settings, _ ) ->
             ( Settings { session = session }, Cmd.none )
 
         ( Just Route.Admin, _ ) ->
             case session.user of
-                User.Driver token profile ->
-                    MyMods.update MyMods.InitializeMyMods (MyMods.initialModel session profile)
-                        |> Tuple.mapFirst MyMods
-                        |> Tuple.mapSecond (Cmd.map MyModsMsg)
+                Nothing ->
+                    toHome session
 
-                _ ->
-                    ( model, Cmd.none )
+                Just user ->
+                    case user of
+                        User.Driver (User.DriverFull token profile) ->
+                            MyMods.init session token profile
+                                |> Tuple.mapFirst MyMods
+                                |> Tuple.mapSecond (Cmd.map MyModsMsg)
+
+                        User.Partial token ->
+                            -- to authed? -- would this loop???
+                            Authed.init session token
+                                |> Tuple.mapFirst Authed
+                                |> Tuple.mapSecond (Cmd.map AuthedMsg)
+
+
+toHome session =
+    ( Home <| Home.initialModel session
+    , Nav.replaceUrl session.key (Route.routeToString Route.Home)
+    )
 
 
 

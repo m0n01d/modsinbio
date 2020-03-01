@@ -38,7 +38,7 @@ decodeCategory =
         |> Decode.hardcoded True
         |> Decode.required "id" Decode.string
         |> Decode.hardcoded False
-        |> Decode.optional "links" (Decode.list Link.decode) []
+        |> Decode.optional "links" (Decode.list Link.decoder) []
         |> Decode.hardcoded ""
         |> Decode.hardcoded ""
         |> Decode.hardcoded ""
