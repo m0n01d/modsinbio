@@ -16,6 +16,7 @@ import Network.Link as Link
 import Network.User as User
 import RemoteData exposing (RemoteData(..), WebData)
 import Task
+import Time
 
 
 page : Model -> { title : String, content : Html Msg }
@@ -64,6 +65,8 @@ view profile mods =
                                 , String.concat
                                     [ "https://dev-mods-in-bio.s3.amazonaws.com/"
                                     , User.idToString profile.id
+                                    , "?lastUpdated="
+                                    , String.fromInt <| Time.posixToMillis profile.lastUpdated
                                     ]
                                 , ")"
                                 ]
