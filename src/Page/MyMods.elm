@@ -1042,12 +1042,24 @@ update msg model =
                 |> Task.attempt (SaveMyProfileResponse profileForm)
             )
 
-        SaveMyProfileResponse profileForm (Ok ()) ->
-            -- ( User.Driver token { p | profile = Just profile, username = model.maybeNewUsername }
-            -- , Session.saveUser token { p | profile = Just profile }
-            -- )
-            -- ( { model | profile = profile, cmd )
-            ( model, Cmd.none )
+        SaveMyProfileResponse { bio, vehicleMake, vehicleModel, vehicleYear } (Ok ()) ->
+            let
+                profile =
+                    { bio = bio
+                    , vehicleMake = vehicleMake
+                    , vehicleModel = vehicleModel
+                    , vehicleYear = vehicleYear
+                    }
+
+                driverProfile =
+                    model.driverProfile
+
+                driverProfile_ =
+                    { driverProfile | profile = Just profile }
+            in
+            ( { model | driverProfile = driverProfile_ }
+            , Session.saveUser accessToken driverProfile
+            )
 
         SaveMyProfileResponse _ _ ->
             ( model, Cmd.none )

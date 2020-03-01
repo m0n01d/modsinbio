@@ -55,12 +55,13 @@ decodeDriverProfile =
         |> Decode.optional "views" Decode.int 0
 
 
+decodeProfileData : Decoder Profile
 decodeProfileData =
     Decode.succeed Profile
-        |> Decode.optional "vehicleYear" Decode.string ""
+        |> Decode.optional "bio" Decode.string ""
         |> Decode.optional "vehicleMake" Decode.string ""
         |> Decode.optional "vehicleModel" Decode.string ""
-        |> Decode.optional "bio" Decode.string ""
+        |> Decode.optional "vehicleYear" Decode.string ""
 
 
 type UserId
