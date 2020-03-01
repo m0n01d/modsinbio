@@ -1042,7 +1042,7 @@ update msg model =
                 |> Task.attempt (SaveMyProfileResponse profileForm)
             )
 
-        SaveMyProfileResponse { bio, vehicleMake, vehicleModel, vehicleYear } (Ok ()) ->
+        SaveMyProfileResponse { bio, vehicleMake, vehicleModel, vehicleYear, maybeNewUsername } (Ok ()) ->
             let
                 profile =
                     { bio = bio
@@ -1055,10 +1055,13 @@ update msg model =
                     model.driverProfile
 
                 driverProfile_ =
-                    { driverProfile | profile = Just profile }
+                    { driverProfile
+                        | profile = Just profile
+                        , username = maybeNewUsername
+                    }
             in
             ( { model | driverProfile = driverProfile_ }
-            , Session.saveUser accessToken driverProfile
+            , Session.saveUser accessToken driverProfile_
             )
 
         SaveMyProfileResponse _ _ ->
