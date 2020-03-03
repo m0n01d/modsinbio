@@ -243,9 +243,9 @@ view model =
                     , Attributes.style "width" "320px"
                     , Attributes.style "height" "529px"
                     ]
-                    [ List.filter
-                        (.links >> List.isEmpty >> not)
-                        mods
+                    [ mods
+                        |> List.filter
+                            (.links >> List.isEmpty >> not)
                         |> Profile.view model.driverProfile
                         |> Html.map ProfileMsg
                     ]
@@ -1127,7 +1127,6 @@ update msg model =
                     ( model, Cmd.none )
 
         SaveNewAvatarResponse (Ok now) ->
-            -- @todo cache bust with 'updated at' attr --
             let
                 driverProfile =
                     model.driverProfile
@@ -1136,7 +1135,6 @@ update msg model =
                     { driverProfile | lastUpdated = now }
             in
             update RemoveNewAvatar { model | driverProfile = driverProfile_ }
-                |> Debug.log "remove"
 
         SaveNewAvatarResponse (Err _) ->
             -- @todo
