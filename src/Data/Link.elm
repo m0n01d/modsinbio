@@ -1,4 +1,14 @@
-module Data.Link exposing (Link, MorePanel, decoder)
+module Data.Link exposing
+    ( Id
+    , Link
+    , MorePanel(..)
+    , decoder
+    , deleteLink
+    , encodeId
+    , encoder
+    , insert
+    , updateIsActive
+    )
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Decode
@@ -77,7 +87,7 @@ protocolToString p =
 -- encode : Link -> Value
 
 
-encode { urlString, description, title, category_id, fragment, host, path, protocol, query } =
+encoder { urlString, description, title, category_id, fragment, host, path, protocol, query } =
     Encode.object
         [ ( "urlString", Encode.string urlString )
         , ( "description", Encode.string description )

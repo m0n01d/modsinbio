@@ -9,7 +9,7 @@ import Json.Encode as Encode exposing (Value)
 
 type alias Session =
     { key : Nav.Key
-    , user : User
+    , user : Maybe User.User
     }
 
 

@@ -26,6 +26,7 @@ import Page.Profile as Profile
 import Process
 import RemoteData exposing (RemoteData(..), WebData)
 import Task
+import Time exposing (Posix)
 import Url
 
 
@@ -54,16 +55,56 @@ import Url
 
 
 type alias Model =
-    { isNewCategoryFormVisible : Bool -- refactor to maybe?
+    { accessToken : User.AccessToken
+    , isNewCategoryFormVisible : Bool -- refactor to maybe?
     , mods : Mods
     , newCategoryName : String
+    , driverProfile : User.DriverProfile
+    , profileForm : Form
     , session : Session
-    , vehicleMakes : WebData (List Vehicle.Make)
-    , vehicleModels : WebData (List Vehicle.Model)
-    , profile : User.Profile
-    , maybeNewAvatar : Maybe String
+    }
+
+
+initialModel : Session -> User.AccessToken -> User.DriverProfile -> Model
+initialModel session accessToken driverProfile =
+    { accessToken = accessToken
+    , isNewCategoryFormVisible = False
+    , mods = Dict.fromList []
+    , newCategoryName = "" -- @todo form?
+    , driverProfile = driverProfile
+    , profileForm =
+        case driverProfile.profile of
+            Just profile ->
+                { bio = profile.bio
+                , maybeAvatarFile = Nothing
+                , maybeNewAvatar = Nothing
+                , maybeNewUsername = driverProfile.username
+                , vehicleMake = profile.vehicleMake
+                , vehicleModel = profile.vehicleModel
+                , vehicleYear = profile.vehicleYear
+                }
+
+            Nothing ->
+                { bio = ""
+                , maybeAvatarFile = Nothing
+                , maybeNewAvatar = Nothing
+                , maybeNewUsername = driverProfile.username
+                , vehicleMake = ""
+                , vehicleModel = ""
+                , vehicleYear = ""
+                }
+    , session = session
+    }
+
+
+type alias Form =
+    { bio : String
     , maybeAvatarFile : Maybe File.File
+    , maybeNewAvatar : Maybe String
     , maybeNewUsername : Maybe String
+    , vehicleMake : String
+    , vehicleModel : String
+    , vehicleYear : String
     }
 
 
@@ -76,26 +117,6 @@ type alias NewLink =
 
 type alias Mods =
     Dict CategoryId Category
-
-
-initialModel : Session -> DriverProfile -> Model
-initialModel session profile =
-    { session = session
-    , mods = Dict.fromList []
-    , isNewCategoryFormVisible = False
-    , newCategoryName = ""
-    , vehicleMakes = RemoteData.NotAsked
-    , vehicleModels = RemoteData.NotAsked
-    , profile =
-        { vehicleYear = ""
-        , vehicleMake = ""
-        , vehicleModel = ""
-        , bio = ""
-        }
-    , maybeNewAvatar = Nothing
-    , maybeAvatarFile = Nothing
-    , maybeNewUsername = profile.username
-    }
 
 
 view : Model -> Html Msg
@@ -114,12 +135,7 @@ view model =
         [ Html.div [ Attributes.class "flex md:flex-row flex-col" ]
             [ Html.div [ Attributes.class "flex-1 md:w-1/2" ]
                 [ Html.div [ Attributes.class "mt-4 md:px-8 pb-8" ]
-                    [ case session.user of
-                        User.Driver _ profile ->
-                            viewMyBio model.maybeNewUsername model profile
-
-                        _ ->
-                            Html.nothing
+                    [ viewMyBio model
                     , Html.div []
                         [ Html.p [ Attributes.class "capitalize text-center font-semibold" ]
                             [ Html.text "my mods" ]
@@ -222,32 +238,24 @@ view model =
                     ]
                 ]
             , Html.div [ Attributes.class "flex-1 hidden sm:block pt-12" ]
-                [ case session.user of
-                    User.Driver _ profile ->
-                        Html.div
-                            [ Attributes.class "border-2 border-black mx-auto rounded-sm"
-                            , Attributes.style "width" "320px"
-                            , Attributes.style "height" "529px"
-                            ]
-                            [ List.filter
-                                (.links >> List.isEmpty >> not)
-                                mods
-                                |> Profile.view profile
-                                |> Html.map ProfileMsg
-                            ]
-
-                    _ ->
-                        Html.text ""
+                [ Html.div
+                    [ Attributes.class "border-2 border-black mx-auto rounded-sm"
+                    , Attributes.style "width" "320px"
+                    , Attributes.style "height" "529px"
+                    ]
+                    [ mods
+                        |> List.filter
+                            (.links >> List.isEmpty >> not)
+                        |> Profile.view model.driverProfile
+                        |> Html.map ProfileMsg
+                    ]
                 ]
             ]
         ]
 
 
-
--- viewMyBio : User.Profile -> Html Msg
-
-
-viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
+viewMyBio : Model -> Html Msg
+viewMyBio { profileForm, driverProfile } =
     Html.div [ Attributes.class "w-full md:w-1/x2 md:mb-8" ]
         [ Html.p [ Attributes.class "font-semibold text-center" ]
             [ Html.text "My car:"
@@ -259,11 +267,11 @@ viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
                     ]
                 , Html.button
                     [ Attributes.class "ml-2 px-4 py-2 font-medium text-center rounded-sm border block w-32 mb-1"
-                    , Attributes.classList [ ( "hidden", maybeNewAvatar /= Nothing ) ]
+                    , Attributes.classList [ ( "hidden", profileForm.maybeNewAvatar /= Nothing ) ]
                     , Events.onClick AskForAvatarFile
                     ]
                     [ Html.text "Select image" ]
-                , Html.viewIf (maybeNewAvatar /= Nothing) <|
+                , Html.viewIf (profileForm.maybeNewAvatar /= Nothing) <|
                     Html.div [ Attributes.class "" ]
                         [ Html.button
                             [ Attributes.class "border-green-700 text-white bg-green-500 ml-2 px-4 py-2 font-medium text-center rounded-sm border block w-32 mb-1"
@@ -279,7 +287,7 @@ viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
                 ]
             , Html.img
                 [ Attributes.class "w-32 mx-auto"
-                , case maybeNewAvatar of
+                , case profileForm.maybeNewAvatar of
                     Just avatar ->
                         Attributes.src avatar
 
@@ -288,6 +296,8 @@ viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
                             String.concat
                                 [ "https://dev-mods-in-bio.s3.amazonaws.com/"
                                 , User.idToString driverProfile.id
+                                , "?last_updated="
+                                , String.fromInt <| Time.posixToMillis driverProfile.lastUpdated
                                 ]
                 ]
                 []
@@ -299,10 +309,8 @@ viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
                 , Html.input
                     [ Attributes.class "border rounded-sm block w-full px-2 py-1"
                     , Attributes.placeholder "@yourinsta"
-
-                    -- , Events.onFocus FetchVehicleMakes
                     , Events.onInput SetUsername
-                    , maybeNewUsername
+                    , profileForm.maybeNewUsername
                         |> Maybe.map Attributes.value
                         |> Maybe.withDefault (Attributes.value "")
                     ]
@@ -317,10 +325,8 @@ viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
                     , Attributes.pattern "[0-9]*"
                     , Attributes.attribute "inputmode" "numeric"
                     , Attributes.placeholder "2018"
-
-                    -- , Events.onFocus FetchVehicleMakes
                     , Events.onInput SetVehicleYear
-                    , Attributes.value profile.vehicleYear
+                    , Attributes.value profileForm.vehicleYear
                     ]
                     []
                 ]
@@ -332,17 +338,9 @@ viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
                     , Attributes.list "bio-car-make--options"
                     , Attributes.placeholder "Subaru"
                     , Events.onInput VehicleMakeSelected
-                    , Attributes.value profile.vehicleMake
+                    , Attributes.value profileForm.vehicleMake
                     ]
                     []
-
-                -- , model.vehicleMakes
-                --     |> RemoteData.map
-                --         (\makes ->
-                --             Html.datalist [ Attributes.id "bio-car-make--options" ]
-                --                 (List.map (\make -> Html.option [ Attributes.value make.name ] []) makes)
-                --         )
-                --     |> RemoteData.withDefault Html.nothing
                 ]
             , Html.div [ Attributes.class "mb-2" ]
                 [ Html.label [ Attributes.class "mb-1  block font-medium" ] [ Html.text "Model" ]
@@ -352,26 +350,16 @@ viewMyBio maybeNewUsername { profile, maybeNewAvatar } driverProfile =
                     , Attributes.list "bio-car-model--options"
                     , Attributes.placeholder "WRX"
                     , Events.onInput SetVehicleModel
-                    , Attributes.value profile.vehicleModel
-
-                    -- , Events.onFocus FetchVehicleModels
+                    , Attributes.value profileForm.vehicleModel
                     ]
                     []
-
-                -- , model.vehicleModels
-                --     |> RemoteData.map
-                --         (\models ->
-                --             Html.datalist [ Attributes.id "bio-car-model--options" ]
-                --                 (List.map (\make -> Html.option [ Attributes.value make.name ] []) models)
-                --         )
-                --     |> RemoteData.withDefault Html.nothing
                 ]
             , Html.div [ Attributes.class "mb-2" ]
                 [ Html.label [ Attributes.class "mb-1 block font-medium" ] [ Html.text "Bio" ]
                 , Html.textarea
                     [ Attributes.class "block w-full border rounded-sm px-2 py-1"
                     , Attributes.placeholder "Premium trim"
-                    , Attributes.value profile.bio
+                    , Attributes.value profileForm.bio
                     , Events.onInput SetBio
                     ]
                     []
@@ -531,8 +519,7 @@ viewMorePanel { onClickClose, link } panel =
 
 
 type Msg
-    = InitializeMyMods
-    | Initialized (Result Api.Error Mods)
+    = Initialized (Result Api.Error Mods)
     | ToggleNewLinkForm CategoryId
     | SetNewUrl CategoryId String
     | FetchTitleResponse CategoryId (WebData String)
@@ -555,24 +542,32 @@ type Msg
     | ToggleLinkActive CategoryId Link
     | ToggleLinkActiveResponse CategoryId (Result Api.Error Link)
     | ProfileMsg Profile.Msg
-    | FetchVehicleMakes
-    | FetchVehicleMakesResponse (WebData (List Vehicle.Make))
     | VehicleMakeSelected String
     | SetVehicleYear String
     | SetVehicleModel String
     | SetBio String
-    | FetchVehicleModels
-    | FetchVehicleModelsResponse (WebData (List Vehicle.Model))
     | SaveMyProfile
-    | SaveMyProfileResponse User.Profile (Result Api.Error ())
+    | SaveMyProfileResponse Form (Result Api.Error ())
     | AskForAvatarFile
     | AvatarImageLoaded File.File
     | AvatarImageBase64 (Result String String)
     | RemoveNewAvatar
     | SaveNewAvatar
-    | SaveNewAvatarResponse (Result Http.Error String)
+    | SaveNewAvatarResponse (Result Http.Error Posix)
     | SetUsername String
     | NoOp
+
+
+init : Session -> User.AccessToken -> User.DriverProfile -> ( Model, Cmd Msg )
+init session accessToken driverProfile =
+    let
+        document =
+            Api.document Category.queryDocument []
+    in
+    ( initialModel session accessToken driverProfile
+    , Api.authedQuery accessToken document Nothing Category.decodeModCategories
+        |> Task.attempt Initialized
+    )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -580,29 +575,13 @@ update msg model =
     let
         session =
             model.session
+
+        accessToken =
+            model.accessToken
     in
     case msg of
-        InitializeMyMods ->
-            let
-                document =
-                    Api.document Category.queryDocument []
-            in
-            ( model
-            , Api.authedQuery (User.sessionToken session) document Nothing Category.decodeModCategories
-                |> Task.attempt Initialized
-            )
-
         Initialized (Ok mods) ->
-            case session.user of
-                User.Driver _ { profile } ->
-                    let
-                        p =
-                            profile |> Maybe.withDefault model.profile
-                    in
-                    ( { model | mods = Dict.union mods model.mods, profile = p }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
+            ( { model | mods = Dict.union mods model.mods }, Cmd.none )
 
         Initialized _ ->
             ( model, Cmd.none )
@@ -611,42 +590,37 @@ update msg model =
             ( { model | newCategoryName = name }, Cmd.none )
 
         AddNewCategory ->
-            case session.user of
-                User.Driver token profile ->
-                    let
-                        order =
-                            1 + List.length (Dict.toList model.mods)
+            let
+                order =
+                    1 + List.length (Dict.toList model.mods)
 
-                        encodedVars =
-                            -- todo move order and owner to backend
-                            Encode.object
-                                [ ( "objects"
-                                  , Encode.list Category.encode
-                                        [ { name = model.newCategoryName
-                                          , order = order
-                                          , owner = User.idToString profile.id
-                                          }
-                                        ]
-                                  )
+                encodedVars =
+                    -- todo move order and owner to backend
+                    Encode.object
+                        [ ( "objects"
+                          , Encode.list Category.encode
+                                [ { name = model.newCategoryName
+                                  , order = order
+                                  , owner = User.idToString model.driverProfile.id
+                                  }
                                 ]
-                                |> Just
+                          )
+                        ]
+                        |> Just
 
-                        decoder =
-                            Decode.succeed identity
-                                |> Decode.requiredAt [ "insert_categories", "returning", "0" ]
-                                    Category.decodeCategory
-                    in
-                    ( model
-                    , Api.authedQuery
-                        token
-                        (Api.document Category.insert [])
-                        encodedVars
-                        decoder
-                        |> Task.attempt CategoryResponse
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+                decoder =
+                    Decode.succeed identity
+                        |> Decode.requiredAt [ "insert_categories", "returning", "0" ]
+                            Category.decodeCategory
+            in
+            ( model
+            , Api.authedQuery
+                accessToken
+                (Api.document Category.insert [])
+                encodedVars
+                decoder
+                |> Task.attempt CategoryResponse
+            )
 
         UpdateCategoryName categoryId ->
             case Dict.get categoryId model.mods of
@@ -664,7 +638,7 @@ update msg model =
                                     (Decode.index 0 Category.decodeCategory)
                     in
                     ( model
-                    , Api.authedQuery (User.sessionToken session) (Api.document Category.update []) (Just encodedVars) decoder
+                    , Api.authedQuery accessToken (Api.document Category.update []) (Just encodedVars) decoder
                         |> Task.attempt CategoryResponse
                     )
 
@@ -896,15 +870,15 @@ update msg model =
                                     encodedVars =
                                         Encode.object
                                             [ ( "objects"
-                                              , Encode.list Link.encode [ newLink ]
+                                              , Encode.list Link.encoder [ newLink ]
                                               )
                                             ]
 
                                     decoder =
                                         Decode.succeed identity
-                                            |> Decode.requiredAt [ "insert_links", "returning" ] (Decode.index 0 Link.decode)
+                                            |> Decode.requiredAt [ "insert_links", "returning" ] (Decode.index 0 Link.decoder)
                                 in
-                                Api.authedQuery (User.sessionToken session) (Api.document Link.insert []) (Just encodedVars) decoder
+                                Api.authedQuery accessToken (Api.document Link.insert []) (Just encodedVars) decoder
                                     |> Task.attempt (AddLinkResponse categoryId)
 
                             Nothing ->
@@ -949,7 +923,7 @@ update msg model =
                             (Decode.index 0 (Decode.value |> Decode.map (always link.id)))
             in
             ( model
-            , Api.authedQuery (User.sessionToken session) (Api.document Link.deleteLink []) encodedVars decoder
+            , Api.authedQuery accessToken (Api.document Link.deleteLink []) encodedVars decoder
                 |> Task.attempt (DeleteLinkResponse categoryId)
             )
 
@@ -980,10 +954,10 @@ update msg model =
                 decoder =
                     Decode.succeed identity
                         |> Decode.requiredAt [ "update_links", "returning" ]
-                            (Decode.index 0 Link.decode)
+                            (Decode.index 0 Link.decoder)
             in
             ( model
-            , Api.authedQuery (User.sessionToken session) (Api.document Link.updateIsActive []) encodedVars decoder
+            , Api.authedQuery accessToken (Api.document Link.updateIsActive []) encodedVars decoder
                 |> Task.attempt (ToggleLinkActiveResponse categoryId)
             )
 
@@ -1017,110 +991,81 @@ update msg model =
         ProfileMsg subMsg ->
             ( model, Cmd.none )
 
-        FetchVehicleMakes ->
-            ( model
-            , if RemoteData.isNotAsked model.vehicleMakes then
-                Vehicle.fetchMakes (FetchVehicleMakesResponse << RemoteData.fromResult)
-
-              else
-                Cmd.none
-            )
-
-        FetchVehicleMakesResponse res ->
-            -- @TODO take in dev
-            ( { model | vehicleMakes = RemoteData.map (List.take 4000) res }, Cmd.none )
-
         VehicleMakeSelected make ->
             let
-                profile =
-                    model.profile
+                profileForm =
+                    model.profileForm
 
                 p =
-                    { profile | vehicleMake = make }
+                    { profileForm | vehicleMake = make }
             in
-            ( { model | profile = p }, Cmd.none )
-
-        FetchVehicleModels ->
-            -- case model.vehicleYear of
-            --     Just year ->
-            --         ( model
-            --         , Vehicle.fetchModels
-            --             { make = model.vehicleMake
-            --             , year = year
-            --             , onComplete = FetchVehicleModelsResponse << RemoteData.fromResult
-            --             }
-            --         )
-            --     _ ->
-            ( model, Cmd.none )
-
-        FetchVehicleModelsResponse res ->
-            ( { model | vehicleModels = res }, Cmd.none )
+            ( { model | profileForm = p }, Cmd.none )
 
         SetVehicleYear year ->
             let
-                profile =
-                    model.profile
+                profileForm =
+                    model.profileForm
 
                 p =
-                    { profile | vehicleYear = year }
+                    { profileForm | vehicleYear = year }
             in
             ( { model
-                | profile = p
+                | profileForm = p
               }
             , Cmd.none
             )
 
         SetVehicleModel vehicleModel ->
             let
-                profile =
-                    model.profile
+                profileForm =
+                    model.profileForm
 
                 p =
-                    { profile | vehicleModel = vehicleModel }
+                    { profileForm | vehicleModel = vehicleModel }
             in
-            ( { model | profile = p }, Cmd.none )
+            ( { model | profileForm = p }, Cmd.none )
 
         SetBio bio ->
             let
-                profile =
-                    model.profile
+                profileForm =
+                    model.profileForm
 
                 p =
-                    { profile | bio = bio }
+                    { profileForm | bio = bio }
             in
-            ( { model | profile = p }, Cmd.none )
+            ( { model | profileForm = p }, Cmd.none )
 
         SaveMyProfile ->
             let
-                profile =
-                    model.profile
+                profileForm =
+                    model.profileForm
             in
             ( model
-            , case session.user of
-                User.Driver token p ->
-                    User.updateUserMutation token p.id profile model.maybeNewUsername
-                        |> Task.attempt (SaveMyProfileResponse profile)
-
-                _ ->
-                    Cmd.none
+            , User.updateUserMutation accessToken model.driverProfile.id profileForm model.profileForm.maybeNewUsername
+                |> Task.attempt (SaveMyProfileResponse profileForm)
             )
 
-        SaveMyProfileResponse profile (Ok ()) ->
+        SaveMyProfileResponse { bio, vehicleMake, vehicleModel, vehicleYear, maybeNewUsername } (Ok ()) ->
             let
-                ( u, cmd ) =
-                    case session.user of
-                        User.Driver token p ->
-                            ( User.Driver token { p | profile = Just profile, username = model.maybeNewUsername }
-                            , Session.saveUser token { p | profile = Just profile }
-                            )
+                profile =
+                    { bio = bio
+                    , vehicleMake = vehicleMake
+                    , vehicleModel = vehicleModel
+                    , vehicleYear = vehicleYear
+                    }
 
-                        _ ->
-                            ( session.user, Cmd.none )
+                driverProfile =
+                    model.driverProfile
 
-                sess =
-                    { session | user = u }
+                driverProfile_ =
+                    { driverProfile
+                        | profile = Just profile
+                        , username = maybeNewUsername
+                    }
             in
-            ( { model | profile = profile, session = sess }, cmd )
+            ( { model | driverProfile = driverProfile_ }
+            , Session.saveUser accessToken driverProfile_
+            )
 
         SaveMyProfileResponse _ _ ->
             ( model, Cmd.none )
@@ -1129,54 +1074,88 @@ update msg model =
             ( model, File.Select.file [ "image/*" ] AvatarImageLoaded )
 
         AvatarImageLoaded file ->
-            ( { model | maybeAvatarFile = Just file }
+            let
+                profileForm =
+                    model.profileForm
+
+                p =
+                    { profileForm | maybeAvatarFile = Just file }
+            in
+            ( { model | profileForm = p }
             , File.toUrl file
                 |> Task.attempt AvatarImageBase64
             )
 
         AvatarImageBase64 (Ok str) ->
-            ( { model | maybeNewAvatar = Just str }, Cmd.none )
+            updateForm (\profileForm -> { profileForm | maybeNewAvatar = Just str }) model
 
         AvatarImageBase64 (Err str) ->
             -- @todo
             ( model, Cmd.none )
 
         RemoveNewAvatar ->
-            ( { model | maybeNewAvatar = Nothing, maybeAvatarFile = Nothing }, Cmd.none )
+            updateForm
+                (\profileForm ->
+                    { profileForm
+                        | maybeNewAvatar = Nothing
+                        , maybeAvatarFile = Nothing
+                    }
+                )
+                model
 
         SaveNewAvatar ->
-            case ( session.user, model.maybeAvatarFile ) of
-                ( User.Driver token profile, Just file ) ->
+            case model.profileForm.maybeAvatarFile of
+                Just file ->
                     let
                         mimeType =
                             File.mime file
                     in
                     ( model
-                    , SignedUrl.getSignedUrl token profile.id mimeType
+                    , SignedUrl.getSignedUrl accessToken model.driverProfile.id mimeType
                         |> Task.andThen
                             (\url ->
-                                uploadFile token { url = url, file = file }
+                                uploadFile accessToken { url = url, file = file }
+                            )
+                        |> Task.andThen
+                            (\_ ->
+                                Time.now
                             )
                         |> Task.attempt SaveNewAvatarResponse
                     )
 
-                _ ->
+                Nothing ->
                     ( model, Cmd.none )
 
-        SaveNewAvatarResponse (Ok _) ->
-            -- @todo cache bust --
-            update RemoveNewAvatar model
+        SaveNewAvatarResponse (Ok now) ->
+            let
+                driverProfile =
+                    model.driverProfile
+
+                driverProfile_ =
+                    { driverProfile | lastUpdated = now }
+            in
+            update RemoveNewAvatar { model | driverProfile = driverProfile_ }
 
         SaveNewAvatarResponse (Err _) ->
             -- @todo
             ( model, Cmd.none )
 
         SetUsername s ->
+            let
+                profileForm =
+                    model.profileForm
+
+                p =
+                    { profileForm | maybeNewUsername = Just s }
+
+                p_ =
+                    { profileForm | maybeNewUsername = Nothing }
+            in
             if String.trim s /= "" then
-                ( { model | maybeNewUsername = Just s }, Cmd.none )
+                ( { model | profileForm = p }, Cmd.none )
 
             else
-                ( { model | maybeNewUsername = Nothing }, Cmd.none )
+                ( { model | profileForm = p_ }, Cmd.none )
 
         NoOp ->
             ( model, Cmd.none )
@@ -1184,6 +1163,10 @@ update msg model =
 
 updateCategory categoryId fn =
     Dict.update categoryId (Maybe.map fn)
+
+
+updateForm fn model =
+    ( { model | profileForm = fn model.profileForm }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg

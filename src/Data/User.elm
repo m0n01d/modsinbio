@@ -2,35 +2,48 @@ module Data.User exposing (..)
 
 import Data.Category as Category exposing (Category, CategoryId)
 import Dict exposing (Dict)
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Json.Encode.Extra as Encode
+import Time exposing (Posix)
 
 
 type User
-    = Public
-    | DriverPartial AccessToken
-    | Driver AccessToken DriverProfile
+    = Partial AccessToken
+    | Driver Driver
 
 
-driverPartialToFull : User -> DriverProfile -> User
-driverPartialToFull user profile =
+type Driver
+    = DriverFull AccessToken DriverProfile
+
+
+driverPartialToFull : DriverProfile -> User -> User
+driverPartialToFull driverProfile user =
     case user of
-        DriverPartial token ->
-            Driver token profile
+        Partial token ->
+            Driver <| DriverFull token driverProfile
 
         _ ->
             user
 
 
+decodeDriverPartial : Decoder User
 decodeDriverPartial =
-    Decode.succeed DriverPartial
+    Decode.succeed Partial
         |> Decode.required "token" Decode.string
 
 
-decodeDriver =
-    Decode.succeed Driver
+decoder : Decoder User
+decoder =
+    Decode.succeed identity
+        |> Decode.custom decodeDriver_
+        |> Decode.map Driver
+
+
+decodeDriver_ : Decoder Driver
+decodeDriver_ =
+    Decode.succeed DriverFull
         |> Decode.requiredAt [ "token" ] Decode.string
         |> Decode.requiredAt [ "user" ] decodeDriverProfile
 
@@ -41,22 +54,16 @@ decodeDriverProfile =
         |> Decode.custom (Decode.field "username" (Decode.nullable Decode.string))
         |> Decode.custom (Decode.field "profile" (Decode.nullable decodeProfileData))
         |> Decode.optional "views" Decode.int 0
+        |> Decode.hardcoded (Time.millisToPosix 0)
 
 
+decodeProfileData : Decoder Profile
 decodeProfileData =
     Decode.succeed Profile
-        |> Decode.optional "vehicleYear" Decode.string ""
+        |> Decode.optional "bio" Decode.string ""
         |> Decode.optional "vehicleMake" Decode.string ""
         |> Decode.optional "vehicleModel" Decode.string ""
-        |> Decode.optional "bio" Decode.string ""
-
-
-decoder =
-    Decode.oneOf [ decodeDriver, decodePublic ]
-
-
-decodePublic =
-    Decode.succeed Public
+        |> Decode.optional "vehicleYear" Decode.string ""
 
 
 type UserId
@@ -76,14 +83,15 @@ type alias DriverProfile =
     , username : Maybe String
     , profile : Maybe Profile
     , views : Int
+    , lastUpdated : Posix
     }
 
 
 type alias Profile =
-    { vehicleYear : String
+    { bio : String
     , vehicleMake : String
     , vehicleModel : String
-    , bio : String
+    , vehicleYear : String
     }
 
 

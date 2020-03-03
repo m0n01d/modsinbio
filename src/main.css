@@ -4,4 +4,6 @@ body {
   min-height: 100vh;
 }
 
-.root {}
+[ui-link-click] {
+  cursor: pointer;
+}
