@@ -6,16 +6,19 @@ import Data.Session as Session
 import Data.User as User
 import Html exposing (Html, div, h1, img, text)
 import Html.Attributes as Attributes exposing (src)
+import Html.Events as Events
 import Json.Decode as Decode exposing (Value)
 import Json.Decode.Extra as Decode
 import Json.Decode.Pipeline as Decode
 import Network.Api as Api
+import Network.User as User
 import Page.Authed as Authed
 import Page.Home as Home
 import Page.Login as Login
 import Page.MyMods as MyMods
 import Page.Profile as Profile
 import Page.Settings as Settings
+import RemoteData exposing (WebData)
 import Route exposing (Route)
 import Task
 import Url
@@ -85,6 +88,9 @@ type Msg
     | MyModsMsg MyMods.Msg
     | AuthedMsg Authed.Msg
     | ProfileMsg Profile.Msg
+    | SubmitLogin -- todo move to Login.elm
+    | LoginResponse (WebData ())
+    | SetEmail String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -127,6 +133,18 @@ update msg model =
                 |> updateWith Profile ProfileMsg
 
         ( ProfileMsg _, _ ) ->
+            ( model, Cmd.none )
+
+        ( SubmitLogin, Login subModel ) ->
+            ( Login { subModel | loginResponse = RemoteData.Loading }, User.login subModel.email LoginResponse )
+
+        ( LoginResponse res, Login _ ) ->
+            ( Login { session = toSession model, email = "", loginResponse = res }, Cmd.none )
+
+        ( SetEmail email, Login subModel ) ->
+            ( Login { session = subModel.session, email = email, loginResponse = RemoteData.NotAsked }, Cmd.none )
+
+        ( _, _ ) ->
             ( model, Cmd.none )
 
 
@@ -184,7 +202,7 @@ changeRouteTo maybeRoute model =
             toHome session
 
         ( Just Route.Login, _ ) ->
-            ( Login { session = session }, Cmd.none )
+            ( Login { session = session, email = "", loginResponse = RemoteData.NotAsked }, Cmd.none )
 
         ( Just (Route.Authed payload), _ ) ->
             case payload of
@@ -255,6 +273,7 @@ navbar model =
         _ ->
             Html.header [ Attributes.class "h-6 py-8 px-4 border-b border-grey-500 flex items-center" ]
                 [ Html.a [ Route.href Route.Home ] [ Html.text "Mods in Bio" ]
+                , Html.a [ Attributes.class "ml-auto", Route.href Route.Login ] [ Html.text "Login" ]
                 ]
 
 
@@ -282,6 +301,48 @@ viewContent model =
             in
             { title = title
             , content = Html.map ProfileMsg content
+            }
+
+        Login { email, loginResponse } ->
+            { title = "Login"
+            , content =
+                let
+                    form isLoading =
+                        Html.form [ Attributes.class "mx-auto md:w-1/4", Attributes.disabled isLoading, Events.onSubmit SubmitLogin ]
+                            [ Html.div []
+                                [ Html.label [ Attributes.class "text-sm font-medium mb-2" ] [ Html.text "Your email" ]
+                                , Html.input
+                                    [ Attributes.class "px-2 py-1 block border w-full"
+                                    , Attributes.placeholder "bruce@wayneindustries.com"
+                                    , Events.onInput SetEmail
+                                    , Attributes.value email
+                                    ]
+                                    []
+                                , Html.button [ Attributes.class "w-full mt-2 px-4 py-2 font-medium text-center rounded-sm border mr-4" ]
+                                    [ Html.text "Submit" ]
+                                ]
+                            , Html.p [ Attributes.class "mt-4 text-sm text-gray-700" ] [ Html.text "We'll email you a link to sign in." ]
+                            ]
+                in
+                Html.div []
+                    [ Html.div [ Attributes.class "w-full mx-auto mt-12 md:mt-32" ]
+                        [ case loginResponse of
+                            RemoteData.NotAsked ->
+                                form False
+
+                            RemoteData.Success () ->
+                                Html.div [ Attributes.class "w-1/3 mx-auto" ]
+                                    [ Html.p [] [ Html.text "Now would be a good time to check your inbox." ]
+                                    , Html.p [] [ Html.text "If an email isn't in there in 5 minutes, read this message again." ]
+                                    ]
+
+                            RemoteData.Loading ->
+                                form True
+
+                            RemoteData.Failure why ->
+                                Html.text "An error occured"
+                        ]
+                    ]
             }
 
         _ ->

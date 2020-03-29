@@ -7,6 +7,7 @@ import Json.Decode.Pipeline as Decode
 import Json.Encode as Encode exposing (Value)
 import Json.Encode.Extra as Encode
 import Network.Api as Api
+import RemoteData
 import Task exposing (Task)
 import Url.Builder
 
@@ -121,4 +122,12 @@ incrementViewCount { id } onComplete =
     Http.get
         { url = Url.Builder.absolute [ "api", "analytics-viewed" ] vars
         , expect = Http.expectWhatever onComplete
+        }
+
+
+login email msg =
+    Http.post
+        { url = Url.Builder.absolute [ "api", "login" ] []
+        , body = Http.jsonBody <| Encode.object [ ( "email", Encode.string email ) ]
+        , expect = Http.expectWhatever (RemoteData.fromResult >> msg)
         }

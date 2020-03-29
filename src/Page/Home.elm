@@ -107,7 +107,7 @@ view model =
             , Html.p [ Attributes.class "text-xl mt-2 mb-3" ]
                 [ Html.text "Share links to your car's mods with your followers and fans." ]
             , Html.form [ Events.onSubmit SaveEmail ]
-                [ Html.p [ Attributes.class "mt-12 mb-2" ] [ Html.text "Be the first to know when it's live." ]
+                [ Html.p [ Attributes.class "mt-12 mb-2" ] [ Html.text "Get on the waitlist for the beta now!" ]
                 , Html.label []
                     [ Html.span [ Attributes.class "font-medium block sm:hidden mr-2 " ]
                         [ Html.text "Leave your email here ↓" ]
