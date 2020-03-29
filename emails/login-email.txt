@@ -1,0 +1,16 @@
+[Mods in Bio] ( https://modsinbio.com )
+
+Here is your login link.
+
+Click the link below to login.
+
+${action_url}
+
+Thanks,
+The Mods in Bio team
+
+
+© 2020 Mods in Bio. All rights reserved.
+
+TorchShip, LLC
+
