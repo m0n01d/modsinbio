@@ -17,6 +17,8 @@ const connection_url =
 
 module.exports = {
   client: "pg",
+  debug: !(APP_ENV === "production"),
+  ssl: true,
   connection: connection_url,
   migrations: {
     directory: __dirname + "/db/migrations"
