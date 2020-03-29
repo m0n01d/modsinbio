@@ -1,6 +1,16 @@
-const { User } = require('../db/schema');
+const toTemplate = require("lodash.template");
 
-const sendEmail = require('./_sendEmail');
+const fs = require("fs");
+const path = require("path");
+
+const rawTemplate = fs.readFileSync(
+  path.resolve(process.cwd(), "emails", "login-email.txt")
+);
+
+const template = toTemplate(rawTemplate);
+const { User } = require("../db/schema");
+
+const sendEmail = require("./_sendEmail");
 
 module.exports = login;
 
@@ -22,7 +32,7 @@ function login(req, res) {
 // TODO error handling
 function loginOrCreate(email) {
   return User.query()
-    .where('email', email)
+    .where("email", email)
     .first()
     .then(user => {
       if (!user) {
@@ -41,10 +51,12 @@ function createUser(email) {
 }
 
 function sendAuthEmail({ email, jwt }) {
+  const action_url = `https://modsinbio.com/app/authed?token=${jwt}`;
+  const html = template({ action_url });
   return sendEmail({
-    html: `<p>${jwt}</p>`,
+    html,
     to: email,
-    subject: 'Login dummy',
+    subject: "Sign in link"
   });
 }
 /*
