@@ -5,8 +5,9 @@ const DOMAIN = "sandbox8950b931a39144d1844aef02fc71ad11.mailgun.org";
 // @TODO env vars here
 const mg = mailgun({ apiKey: api_key, domain: DOMAIN });
 module.exports = function sendEmail({
-  html,
-  from = `help@modsinbio.com`,
+  html = null,
+  text = null,
+  from = `mods@modsinbio.com`,
   to,
   subject
 }) {
@@ -14,7 +15,8 @@ module.exports = function sendEmail({
     from,
     to: [to],
     subject,
-    html
+    html,
+    text
   };
   return new Promise((resolve, reject) => {
     mg.messages().send(data, function(error, body) {

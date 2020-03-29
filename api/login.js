@@ -31,6 +31,7 @@ function login(req, res) {
 
 // TODO error handling
 function loginOrCreate(email) {
+  console.log("creating", email);
   return User.query()
     .where("email", email)
     .first()
@@ -52,9 +53,9 @@ function createUser(email) {
 
 function sendAuthEmail({ email, jwt }) {
   const action_url = `https://modsinbio.com/app/authed?token=${jwt}`;
-  const html = template({ action_url });
+  const text = template({ action_url });
   return sendEmail({
-    html,
+    text,
     to: email,
     subject: "Sign in link"
   });
