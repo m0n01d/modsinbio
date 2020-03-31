@@ -33,7 +33,6 @@ function login(req, res) {
 
 // TODO error handling
 function loginOrCreate(email) {
-  console.log("creating", email);
   return User.query()
     .where("email", email)
     .first()
