@@ -24,15 +24,11 @@ function login(req, res) {
     .then(getJwt)
     .then(jwt => {
       const { host } = req.headers;
-      console.log({ host });
       const action_url = `https://${host}/app/authed?token=${jwt}`;
-      return sendAuthEmail({ email, actionUrl });
+      return sendAuthEmail({ email, action_url });
     })
     .then(_ => res.status(200).send())
-    .catch(e => {
-      console.error(e);
-      res.status(500).send(e);
-    });
+    .catch(e => res.status(500).send(e));
 }
 
 // TODO error handling
@@ -57,7 +53,7 @@ function createUser(email) {
   return User.query().insert({ email });
 }
 
-function sendAuthEmail({ email, actionUrl }) {
+function sendAuthEmail({ email, action_url }) {
   const text = template({ action_url });
   return sendEmail({
     text,
