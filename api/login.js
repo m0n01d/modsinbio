@@ -24,11 +24,15 @@ function login(req, res) {
     .then(getJwt)
     .then(jwt => {
       const { host } = req.headers;
+      console.log({ host });
       const action_url = `https://${host}/app/authed?token=${jwt}`;
       return sendAuthEmail({ email, actionUrl });
     })
     .then(_ => res.status(200).send())
-    .catch(e => res.status(500).send(e));
+    .catch(e => {
+      console.error(e);
+      res.status(500).send(e);
+    });
 }
 
 // TODO error handling
