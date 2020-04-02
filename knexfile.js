@@ -1,24 +1,26 @@
-const databaseName = 'postgres';
-const pg = require('pg');
+const databaseName = "postgres";
+const pg = require("pg");
 
 const {
   NOW_GITHUB_COMMIT_REF,
   DATABASE_URL,
   PROD_DATABASE_URL,
-  APP_ENV,
+  APP_ENV
 } = process.env;
 
 const connection_url =
-  APP_ENV == 'development'
+  APP_ENV == "development"
     ? DATABASE_URL // LOCALHOST
-    : NOW_GITHUB_COMMIT_REF == 'master'
+    : NOW_GITHUB_COMMIT_REF == "master"
     ? PROD_DATABASE_URL // DIGITAL_OCEAN -- @TODO
-    : DATABASE_URL; // HEROKU
+    : `${DATABASE_URL}?ssl=true`; // HEROKU
 
 module.exports = {
-  client: 'pg',
+  client: "pg",
+  debug: !(APP_ENV === "production"),
+  ssl: true,
   connection: connection_url,
   migrations: {
-    directory: __dirname + '/db/migrations',
-  },
+    directory: __dirname + "/db/migrations"
+  }
 };

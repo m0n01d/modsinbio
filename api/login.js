@@ -23,7 +23,9 @@ function login(req, res) {
   return loginOrCreate(email)
     .then(getJwt)
     .then(jwt => {
-      return sendAuthEmail({ email, jwt });
+      const { host } = req.headers;
+      const action_url = `https://${host}/app/authed?token=${jwt}`;
+      return sendAuthEmail({ email, action_url });
     })
     .then(_ => res.status(200).send())
     .catch(e => res.status(500).send(e));
@@ -50,11 +52,10 @@ function createUser(email) {
   return User.query().insert({ email });
 }
 
-function sendAuthEmail({ email, jwt }) {
-  const action_url = `https://modsinbio.com/app/authed?token=${jwt}`;
-  const html = template({ action_url });
+function sendAuthEmail({ email, action_url }) {
+  const text = template({ action_url });
   return sendEmail({
-    html,
+    text,
     to: email,
     subject: "Sign in link"
   });
