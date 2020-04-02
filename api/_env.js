@@ -1,4 +1,5 @@
-const isProd = process.env.NODE_ENV == 'production';
+const isProd = process.env.NOW_GITHUB_COMMIT_REF == 'master';
+// can't go by `process.env.NODE_ENV`
 
 const productionConfig = {
   thanks: {
