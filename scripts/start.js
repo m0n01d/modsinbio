@@ -19,7 +19,6 @@ const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
 const webpack = require('webpack');
-const WebpackDevServer = require('webpack-dev-server');
 const config = require('../config/webpack.config.dev');
 const {
   choosePort,
@@ -27,8 +26,14 @@ const {
   prepareProxy,
 } = require('react-dev-utils/WebpackDevServerUtils');
 const formatWebpackMessages = require('react-dev-utils/formatWebpackMessages');
-const clearConsole = require('react-dev-utils/clearConsole');
+require('react-dev-utils/clearConsole');
+const clearConsole = () => {};
+require.cache[
+  require.resolve('react-dev-utils/clearConsole')
+].exports = clearConsole;
 const openBrowser = require('react-dev-utils/openBrowser');
+const WebpackDevServer = require('webpack-dev-server');
+
 const createDevServerConfig = require('../config/webpackDevServer.config');
 const formatElmCompilerErrors = require('./utils/formatElmCompilerErrors');
 const paths = require('../config/paths');

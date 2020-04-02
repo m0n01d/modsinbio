@@ -1,16 +1,19 @@
-const s3 = require('../config/s3')();
+const { S3 } = require('aws-sdk');
 
-const isProd = process.env.NODE_ENV == 'production';
+const {
+  s3Config,
+  signedUrl: { Bucket }
+} = require('./_env');
+
+const s3 = new S3(s3Config);
 
 module.exports = function signedUrl(req, res) {
-  // const Bucket = !isProd ? 'fooimgix' : 'prod.vertol.io'; @TODO
-  const Bucket = 'dev-mods-in-bio';
   const { key, type } = req.query;
   // s3.head object to check if it exists, before overwriting...
   const url = s3.getSignedUrl('putObject', {
     Bucket,
     Key: key,
-    ContentType: type,
+    ContentType: type
   });
 
   res.send(url);
