@@ -124,7 +124,7 @@ viewCategory { name, links } =
             List.drop 3 links
     in
     Html.div [ Attributes.class "my-4" ]
-        [ Html.p [ Attributes.class "font-semibold text-sm px-px sticky top-0 bg-white py-2" ]
+        [ Html.p [ Attributes.class "font-semibold text-sm px-px sticky top-0 bg-white pt-2" ]
             [ Html.text name ]
         , Html.ul []
             (firstChunk |> List.map viewPreviewLink)
@@ -148,7 +148,7 @@ viewCategory { name, links } =
 viewPreviewLink : Link -> Html Msg
 viewPreviewLink { title, description, urlString, id } =
     Html.li []
-        [ Html.div [ Attributes.class "my-4 px-1" ]
+        [ Html.div [ Attributes.class "my-3 px-1" ]
             [ Html.div [ Attributes.class "mb-1" ]
                 [ Html.node "ui-link-click"
                     [ Decode.succeed (LinkClicked id)
