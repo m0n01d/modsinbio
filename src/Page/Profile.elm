@@ -123,7 +123,7 @@ viewCategory { name, links } =
         theRest =
             List.drop 3 links
     in
-    Html.div [ Attributes.class "my-4" ]
+    Html.div [ Attributes.class "mb-4" ]
         [ Html.p [ Attributes.class "font-semibold text-sm px-px sticky top-0 bg-white pt-2" ]
             [ Html.text name ]
         , Html.ul []
