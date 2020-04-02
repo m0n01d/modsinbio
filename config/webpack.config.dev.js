@@ -9,6 +9,10 @@ const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const getClientEnvironment = require('./env');
 const paths = require('../config/paths');
 
+const elmViewNames = path.resolve(
+  '/Users/dwightdoane/web/dwit/elm-view-names/loader.js'
+);
+
 // Webpack uses `publicPath` to determine where the app is being served from.
 // In development, we always serve from the root. This makes config easier.
 const publicPath = '/';
@@ -48,7 +52,7 @@ module.exports = {
     // Errors should be considered fatal in development
     require.resolve('react-error-overlay'),
 
-    paths.appIndexJs,
+    paths.appIndexJs
   ],
   output: {
     // Add /* filename */ comments to generated require()s in the output.
@@ -63,7 +67,7 @@ module.exports = {
     publicPath: publicPath,
     // Point sourcemap entries to original disk location (format as URL on Windows)
     devtoolModuleFilenameTemplate: info =>
-      path.resolve(info.absoluteResourcePath).replace(/\\/g, '/'),
+      path.resolve(info.absoluteResourcePath).replace(/\\/g, '/')
   },
   optimization: {
     // Automatically split vendor and commons
@@ -71,15 +75,15 @@ module.exports = {
     // https://medium.com/webpack/webpack-4-code-splitting-chunk-graph-and-the-splitchunks-optimization-be739a861366
     splitChunks: {
       chunks: 'all',
-      name: 'vendors',
+      name: 'vendors'
     },
     // Keep the runtime chunk seperated to enable long term caching
     // https://twitter.com/wSokra/status/969679223278505985
-    runtimeChunk: true,
+    runtimeChunk: true
   },
   resolve: {
     modules: ['node_modules'],
-    extensions: ['.js', '.elm'],
+    extensions: ['.js', '.elm']
   },
   module: {
     strictExportPresence: true,
@@ -104,9 +108,9 @@ module.exports = {
                 // end-users inevitably import '@babel/polyfill'.
                 useBuiltIns: 'entry',
                 // Do not transform modules to CJS
-                modules: false,
-              },
-            ],
+                modules: false
+              }
+            ]
           ],
           plugins: [
             // Polyfills the runtime needed for async/await and generators
@@ -114,11 +118,11 @@ module.exports = {
               require('@babel/plugin-transform-runtime').default,
               {
                 helpers: false,
-                regenerator: true,
-              },
-            ],
-          ],
-        },
+                regenerator: true
+              }
+            ]
+          ]
+        }
       },
       // Process any JS outside of the app with Babel.
       // Unlike the application JS, we only compile the standard ES features.
@@ -136,23 +140,26 @@ module.exports = {
                   require('@babel/preset-env').default,
                   {
                     // Do not transform modules to CJS
-                    modules: false,
-                  },
-                ],
+                    modules: false
+                  }
+                ]
               ],
               cacheDirectory: true,
-              highlightCode: true,
-            },
-          },
-        ],
+              highlightCode: true
+            }
+          }
+        ]
       },
       {
         test: /\.elm$/,
         include: paths.appSrc,
         exclude: [/[/\\\\]elm-stuff[/\\\\]/, /[/\\\\]node_modules[/\\\\]/],
         use: [
+          //{
+          // loader: elmViewNames,
+          //},
           {
-            loader: require.resolve('elm-hot-webpack-loader'),
+            loader: require.resolve('elm-hot-webpack-loader')
           },
           // string-replace-loader works as InterpolateHtmlPlugin for Elm,
           // it replaces all of the %PUBLIC_URL% with the URL of your
@@ -165,19 +172,20 @@ module.exports = {
                 {
                   search: '%PUBLIC_URL%',
                   replace: publicUrl,
-                  flags: 'g',
+                  flags: 'g'
                 },
                 {
                   search: '%API_URL%',
                   replace: env.raw.API_URL,
-                  flags: 'g',
-                },
-              ],
-            },
+                  flags: 'g'
+                }
+              ]
+            }
           },
-          {
-            loader: require.resolve('elm-asset-webpack-loader'),
-          },
+          // {
+          //   loader: require.resolve('elm-asset-webpack-loader'),
+          // },
+
           {
             loader: require.resolve('elm-webpack-loader'),
             options: {
@@ -186,10 +194,10 @@ module.exports = {
               // for invalid values, "true" and as a default, enable it
               debug: process.env.ELM_DEBUGGER === 'false' ? false : true,
               pathToElm: paths.elm,
-              forceWatch: true,
-            },
-          },
-        ],
+              forceWatch: true
+            }
+          }
+        ]
       },
 
       // "postcss" loader applies autoprefixer to our CSS.
@@ -205,8 +213,8 @@ module.exports = {
           {
             loader: require.resolve('css-loader'),
             options: {
-              importLoaders: 1,
-            },
+              importLoaders: 1
+            }
           },
           {
             // Options for PostCSS as we reference these options twice
@@ -222,12 +230,12 @@ module.exports = {
 
                 require('postcss-flexbugs-fixes'),
                 autoprefixer({
-                  flexbox: 'no-2009',
-                }),
-              ],
-            },
-          },
-        ],
+                  flexbox: 'no-2009'
+                })
+              ]
+            }
+          }
+        ]
       },
 
       {
@@ -239,13 +247,13 @@ module.exports = {
           /\.scss$/,
           /\.sass$/,
           /\.json$/,
-          /\.svg$/,
+          /\.svg$/
         ],
         loader: require.resolve('url-loader'),
         options: {
           limit: 10000,
-          name: 'static/media/[name].[hash:8].[ext]',
-        },
+          name: 'static/media/[name].[hash:8].[ext]'
+        }
       },
 
       // "file" loader for svg
@@ -253,16 +261,16 @@ module.exports = {
         test: /\.svg$/,
         loader: require.resolve('file-loader'),
         options: {
-          name: 'static/media/[name].[hash:8].[ext]',
-        },
-      },
-    ],
+          name: 'static/media/[name].[hash:8].[ext]'
+        }
+      }
+    ]
   },
   plugins: [
     // Generates an `index.html` file with the <script> injected.
     new HtmlWebpackPlugin({
       inject: true,
-      template: paths.appHtml,
+      template: paths.appHtml
     }),
     // Makes some environment variables available in index.html.
     // The public URL is available as %PUBLIC_URL% in index.html, e.g.:
@@ -277,7 +285,7 @@ module.exports = {
     // Watcher doesn't work well if you mistype casing in a path so we use
     // a plugin that prints an error when you attempt to do this.
     // See https://github.com/facebook/create-react-app/issues/240
-    new CaseSensitivePathsPlugin(),
+    new CaseSensitivePathsPlugin()
   ],
 
   // Some libraries import Node modules but don't use them in the browser.
@@ -287,9 +295,9 @@ module.exports = {
     fs: 'empty',
     net: 'empty',
     tls: 'empty',
-    child_process: 'empty',
+    child_process: 'empty'
   },
   // Turn off performance processing because we utilize
   // our own hints via the FileSizeReporter
-  performance: false,
+  performance: false
 };
