@@ -23,6 +23,10 @@ const devConfig = {
     accessKeyId: process.env.S3_ACCESS_KEY,
     secretAccessKey: process.env.S3_SECRET_KEY,
     region: 'us-east-1'
+  },
+  mailgunConfig: {
+    apiKey: process.env.MAILGUN_API_KEY,
+    domain: process.env.MAILGUN_DOMAIN
   }
 };
 

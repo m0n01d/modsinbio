@@ -1,12 +1,11 @@
 {
   "env": {
-    "CLIENT_ID": "@client_id",
-    "CLIENT_SECRET": "@client_secret",
-    "REDIRECT_URI": "@redirect_uri",
     "S3_ACCESS_KEY": "@s3_access_key",
     "S3_SECRET_KEY": "@s3_secret_key",
     "AUTH_PRIVATE_KEY": "@mods-private-pem",
     "AUTH_PUBLIC_KEY": "@mods-public-pem",
-    "DATABASE_URL": "@db-url"
+    "DATABASE_URL": "@db-url",
+    "MAILGUN_API_KEY": "@mailgun-api-key",
+    "MAILGUN_DOMAIN": "@mailgun-domain"
   }
 }

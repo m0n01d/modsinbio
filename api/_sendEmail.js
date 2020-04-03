@@ -1,9 +1,8 @@
-const mailgun = require("mailgun-js");
+const mailgun = require('mailgun-js');
+const { mailgunConfig } = require('./_env');
 
-const api_key = "d1b89b4d6707182da68ac066bcbfcbd9-8b7bf2f1-7a633a40";
-const DOMAIN = "sandbox8950b931a39144d1844aef02fc71ad11.mailgun.org";
-// @TODO env vars here
-const mg = mailgun({ apiKey: api_key, domain: DOMAIN });
+const mg = mailgun(mailgunConfig);
+
 module.exports = function sendEmail({
   html = null,
   text = null,
